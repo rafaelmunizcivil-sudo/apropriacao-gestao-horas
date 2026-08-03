@@ -324,7 +324,7 @@
 
       <div style="border: 1px solid #e2e2e2; border-radius: 14px; background: #fff; padding: 8px 18px 12px; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); position: relative;">
         <div style="font-size: 14px; color: #b48a7c; margin-bottom: 2px">Tipo de tarefa</div>
-        <div onClick="{{ toggleTipo }}" style="font-size: 20px; color: #333; cursor: pointer; min-height: 24px;">{{ tipoLabel }}</div>
+        <input type="text" value="{{ tipoBusca }}" onChange="{{ onTipoBuscaChange }}" onFocus="{{ toggleTipo }}" placeholder="Digite pelo menos 2 letras..." style="width: 100%; border: none; outline: none; background: transparent; font-size: 20px; color: #333; padding: 0;">
         <sc-if value="{{ isTipoOpen }}" hint-placeholder-val="{{ false }}">
           <div style="position: absolute; top: 100%; left: 0; right: 0; margin-top: 4px; background: #fff; border: 1px solid #d9d9d9; border-radius: 10px; box-shadow: 0 8px 20px rgba(16,38,92,0.15); max-height: 240px; overflow-y: auto; z-index: 30;">
             <sc-for list="{{ tipoOptions }}" as="opt" hint-placeholder-count="3">
@@ -634,7 +634,7 @@ class Component extends DCLogic {
   state = {
     cliente: '', contrato: '', projeto: '', diaTrabalho: new Date().toISOString().slice(0, 10),
     feriasInicio: '', feriasFim: '', feriasResetKey: 0,
-    horasGastas: '', tipoTarefa: '', descricao: '', mensagem: '', mensagemTipo: '',
+    horasGastas: '', tipoTarefa: '', tipoBusca: '', descricao: '', mensagem: '', mensagemTipo: '',
     lancamentos: [], lancamentosTodos: [], openDropdown: null, editingId: null,
     ultimoRelatorioTimestamp: Number(localStorage.getItem('apropia_ultimo_relatorio')) || null,
     paginaAtual: 'funcionario',
@@ -944,6 +944,7 @@ class Component extends DCLogic {
   toggleContrato = () => { if (this.state.cliente && this.state.cliente !== 'CONSOL') this.toggleDropdown('contrato'); };
   toggleProjeto = () => { if (this.state.contrato && this.state.cliente !== 'CONSOL') this.toggleDropdown('projeto'); };
   toggleTipo = () => this.toggleDropdown('tipo');
+  onTipoBuscaChange = (e) => this.setState({ tipoBusca: e.target.value, openDropdown: 'tipo' });
 
   selecionarCliente = (v) => {
     if (v === 'CONSOL') { this.setState({ cliente: v, contrato: 'CONSOL', projeto: 'CONSOL', openDropdown: null }); return; }
@@ -954,7 +955,7 @@ class Component extends DCLogic {
     this.setState({ contrato: v, projeto: projetos.length === 1 ? projetos[0] : '', openDropdown: null });
   };
   selecionarProjeto = (v) => this.setState({ projeto: v, openDropdown: null });
-  selecionarTipo = (v) => this.setState({ tipoTarefa: v, openDropdown: null });
+  selecionarTipo = (v) => this.setState({ tipoTarefa: v, tipoBusca: v, openDropdown: null });
   onFeriasInicioChange = (e) => this.setState({ feriasInicio: e.target.value });
   onFeriasFimChange = (e) => this.setState({ feriasFim: e.target.value });
 
@@ -1002,7 +1003,7 @@ class Component extends DCLogic {
   onDescricaoChange = (e) => this.setState({ descricao: e.target.value.slice(0, 500) });
 
   onLimpar = () => this.setState((s) => ({
-    cliente: '', contrato: '', projeto: '', horasGastas: '', tipoTarefa: '', descricao: '', mensagem: '',
+    cliente: '', contrato: '', projeto: '', horasGastas: '', tipoTarefa: '', tipoBusca: '', descricao: '', mensagem: '',
     feriasInicio: '', feriasFim: '', feriasResetKey: s.feriasResetKey + 1,
   }));
 
@@ -1095,7 +1096,7 @@ class Component extends DCLogic {
   editarLancamento = (l) => {
     this.setState({
       editingId: l.id, diaTrabalho: l.dia, cliente: l.cliente, contrato: l.contrato,
-      projeto: l.projeto, horasGastas: String(l.horas), tipoTarefa: l.tipoTarefa,
+      projeto: l.projeto, horasGastas: String(l.horas), tipoTarefa: l.tipoTarefa, tipoBusca: l.tipoTarefa,
       descricao: l.descricao || '', mensagem: '',
     });
   };
@@ -1123,7 +1124,7 @@ class Component extends DCLogic {
         corSubTexto: isWeekend ? '#665f2b' : '#f1f1f1',
         onClick: () => this.setState({
           diaTrabalho: iso, cliente: '', contrato: '', projeto: '',
-          horasGastas: '', tipoTarefa: '', descricao: '', mensagem: '',
+          horasGastas: '', tipoTarefa: '', tipoBusca: '', descricao: '', mensagem: '',
         }),
       });
     }
@@ -1164,7 +1165,7 @@ class Component extends DCLogic {
       label, horasLabel: `${totalHoras}h`, bg: '#10265c',
       onClick: () => this.setState({
         diaTrabalho: iso, cliente: '', contrato: '', projeto: '',
-        horasGastas: '', tipoTarefa: '', descricao: '', mensagem: '',
+        horasGastas: '', tipoTarefa: '', tipoBusca: '', descricao: '', mensagem: '',
       }),
     };
   }
@@ -1466,6 +1467,7 @@ class Component extends DCLogic {
       toggleContrato: this.toggleContrato,
       toggleProjeto: this.toggleProjeto,
       toggleTipo: this.toggleTipo,
+      onTipoBuscaChange: this.onTipoBuscaChange,
       selecionarCliente: this.selecionarCliente,
       selecionarContrato: this.selecionarContrato,
       selecionarProjeto: this.selecionarProjeto,
@@ -1473,7 +1475,14 @@ class Component extends DCLogic {
       clienteOptions: this.mapOptions(this.getClientesTodos(), this.selecionarCliente),
       contratoOptions: this.mapOptions(contratosDisponiveis, this.selecionarContrato),
       projetoOptions: this.mapOptions(projetosDisponiveis, this.selecionarProjeto),
-      tipoOptions: this.mapOptions(s.cliente === 'CONSOL' ? this.getTiposTarefaTodos(true) : this.getTiposTarefaTodos(false), this.selecionarTipo),
+      tipoOptions: this.mapOptions(
+        (() => {
+          const todos = s.cliente === 'CONSOL' ? this.getTiposTarefaTodos(true) : this.getTiposTarefaTodos(false);
+          const busca = (s.tipoBusca || '').trim().toLowerCase();
+          return busca.length >= 2 ? todos.filter((t) => t.toLowerCase().includes(busca)) : todos;
+        })(),
+        this.selecionarTipo,
+      ),
       isFeria: this.ehFeria(s.tipoTarefa),
       naoEhFeria: !this.ehFeria(s.tipoTarefa),
       feriasInicio: s.feriasInicio,
