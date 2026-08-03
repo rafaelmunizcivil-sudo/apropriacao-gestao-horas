@@ -302,7 +302,7 @@
       <sc-if value="{{ naoEhFeria }}" hint-placeholder-val="{{ true }}">
         <div style="border: 1px solid #e2e2e2; border-radius: 14px; background: #fff; padding: 10px 18px 14px; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); position: relative;">
           <div style="font-size: 14px; color: #b48a7c; margin-bottom: 2px">Dia de trabalho*</div>
-          <input type="date" value="{{ diaTrabalho }}" onChange="{{ onDiaChange }}" style="width: 100%; border: none; outline: none; background: transparent; font-size: 20px; color: #333">
+          <input type="date" value="{{ diaTrabalho }}" onChange="{{ onDiaChange }}" min="{{ diaMinPermitido }}" max="{{ diaMaxPermitido }}" style="width: 100%; border: none; outline: none; background: transparent; font-size: 20px; color: #333">
         </div>
       </sc-if>
 
@@ -387,11 +387,76 @@
       </sc-if>
     </div>
 
+    <h2 style="margin: 48px 0 24px; font-size: 24px; font-weight: 500; color: #fff;">Dashboard de horas por mês</h2>
+    <div style="border-top: 1px solid #ffffff; margin-bottom: 24px;"></div>
+    <div style="display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap;">
+      <sc-for list="{{ dashboardMeses }}" as="m" hint-placeholder-count="3">
+        <div style="border-radius: 14px; background: #fff; padding: {{ m.padding }}; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); display: flex; flex-direction: column; align-items: center; gap: 12px; width: {{ m.largura }};">
+          <div style="font-size: {{ m.fontLabel }}; font-weight: 600; color: #10265c; text-transform: capitalize;">{{ m.label }}</div>
+          <div style="width: {{ m.tamanho }}; height: {{ m.tamanho }}; border-radius: 50%; background: {{ m.gradiente }};"></div>
+          <sc-if value="{{ m.vazio }}" hint-placeholder-val="{{ false }}">
+            <div style="color: #999; font-size: 12px;">Sem lançamentos</div>
+          </sc-if>
+          <sc-if value="{{ m.destaque }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+              <sc-for list="{{ m.itens }}" as="d" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #333;">
+                  <div style="width: 12px; height: 12px; border-radius: 3px; background: {{ d.cor }}; flex: 0 0 12px;"></div>
+                  <div style="flex: 1;">{{ d.label }}</div>
+                  <div style="font-weight: 600; color: #10265c;">{{ d.horas }}h</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; flex-wrap: wrap; gap: 8px;">
       <div style="font-size: 13px; color: #9fb0d8;">{{ nomeUsuario }} · <button onClick="{{ abrirTrocarSenha }}" style="background: none; border: none; color: #9fb0d8; font-size: 13px; cursor: pointer; text-decoration: underline; padding: 0;">Trocar senha</button> · <button onClick="{{ sair }}" style="background: none; border: none; color: #9fb0d8; font-size: 13px; cursor: pointer; text-decoration: underline; padding: 0;">Sair</button></div>
-      <sc-if value="{{ ehSupervisor }}" hint-placeholder-val="{{ false }}">
-        <button onClick="{{ abrirLoginSupervisor }}" style="background: none; border: none; color: #9fb0d8; font-size: 16px; cursor: pointer; text-decoration: underline">Acesso da coordenação</button>
-      </sc-if>
+      <div style="display: flex; gap: 16px;">
+        <sc-if value="{{ ehSupervisor }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ abrirLoginSupervisor }}" style="background: none; border: none; color: #9fb0d8; font-size: 16px; cursor: pointer; text-decoration: underline">Acesso da coordenação</button>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDashboardView }}" hint-placeholder-val="{{ false }}">
+<div style="min-height: 100vh; background: #10265c; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #2b2b2b;">
+  <div style="padding: 20px 48px; border-bottom: 1px solid #24397a; background: #eef2f9; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+    <img src="assets/logo-consol.png" alt="Consol Engenheiros Consultores" style="height: 44px; width: auto;">
+    <button onClick="{{ voltarDoDashboard }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Voltar</button>
+  </div>
+  <div style="padding: 40px 48px;">
+    <h1 style="margin: 0 0 24px; font-size: 40px; font-weight: 500; letter-spacing: -0.5px; color: #fff">Dashboard de Horas</h1>
+    <div style="border-top: 1px solid #ffffff; margin-bottom: 24px;"></div>
+    <sc-if value="{{ dashboardMostrarSeletor }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-bottom: 24px;">
+        <select value="{{ dashboardUsuarioId }}" onChange="{{ onDashboardUsuarioChange }}" style="padding: 10px 14px; border-radius: 8px; border: none; font-size: 15px; min-width: 260px;">
+          <sc-for list="{{ usuariosLista }}" as="u" hint-placeholder-count="4">
+            <option value="{{ u.id }}">{{ u.nome }}</option>
+          </sc-for>
+        </select>
+      </div>
+    </sc-if>
+    <div style="border-radius: 14px; background: #fff; padding: 32px; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); display: flex; gap: 48px; align-items: center; flex-wrap: wrap;">
+      <div style="width: 280px; height: 280px; border-radius: 50%; background: {{ dashboardGradiente }}; flex: 0 0 280px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 12px; min-width: 220px;">
+        <sc-for list="{{ dashboardDados }}" as="d" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 10px; font-size: 15px; color: #333;">
+            <div style="width: 14px; height: 14px; border-radius: 3px; background: {{ d.cor }}; flex: 0 0 14px;"></div>
+            <div style="flex: 1;">{{ d.label }}</div>
+            <div style="font-weight: 600; color: #10265c;">{{ d.horas }}h</div>
+            <div style="color: #999; font-size: 13px; width: 44px; text-align: right;">{{ d.pct }}%</div>
+          </div>
+        </sc-for>
+        <sc-if value="{{ dashboardVazio }}" hint-placeholder-val="{{ false }}">
+          <div style="color: #999; font-size: 14px;">Nenhum lançamento encontrado para este funcionário.</div>
+        </sc-if>
+      </div>
     </div>
   </div>
 </div>
@@ -409,6 +474,7 @@
         <button onClick="{{ abrirCadastroAtividade }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Cadastrar atividade</button>
         <button onClick="{{ abrirTrocarSenha }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Trocar senha</button>
       </sc-if>
+      <button onClick="{{ abrirDashboards }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Dashboards</button>
       <button onClick="{{ sair }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Sair</button>
       <button onClick="{{ voltarParaFuncionario }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Voltar para o formulário</button>
     </div>
@@ -706,6 +772,71 @@ class Component extends DCLogic {
   };
 
   abrirLoginSupervisor = () => this.setState({ paginaAtual: 'supervisor' });
+  getDashboardMeses() {
+    const s = this.state;
+    const fonteBase = s.lancamentos;
+    const cores = ['#10265c', '#2c7a3d', '#b48a7c', '#2c5aa0', '#a13a2c', '#7a5ca8', '#c98a2c', '#3a9ba1'];
+    const hoje = new Date();
+    const meses = [];
+    for (let i = 0; i < 12; i++) {
+      const ref = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      const chaveMes = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, '0')}`;
+      const doMes = fonteBase.filter((l) => (l.dia || '').startsWith(chaveMes));
+      if (doMes.length === 0 && i > 0) continue;
+      const grupos = {};
+      doMes.forEach((l) => {
+        const chave = this.ehFeria(l.tipoTarefa) ? 'Férias' : (l.contrato || l.cliente || 'Sem contrato');
+        grupos[chave] = (grupos[chave] || 0) + Number(l.horas || 0);
+      });
+      const total = Object.values(grupos).reduce((a, b) => a + b, 0);
+      const itens = Object.keys(grupos).sort().map((label, idx) => ({
+        label, horas: Math.round(grupos[label] * 10) / 10,
+        pct: total > 0 ? Math.round((grupos[label] / total) * 1000) / 10 : 0,
+        cor: cores[idx % cores.length],
+      }));
+      let acc = 0;
+      const gradiente = total === 0 ? '#eee' : `conic-gradient(${itens.map((d) => {
+        const inicio = acc; acc += (d.pct / 100) * 360;
+        return `${d.cor} ${inicio}deg ${acc}deg`;
+      }).join(', ')})`;
+      const destaque = i === 0;
+      meses.push({
+        label: ref.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+        itens, vazio: total === 0, destaque,
+        gradiente, tamanho: destaque ? '220px' : '110px',
+        largura: destaque ? '260px' : '130px',
+        padding: destaque ? '24px' : '14px',
+        fontLabel: destaque ? '16px' : '13px',
+      });
+    }
+    return meses;
+  }
+  abrirDashboards = () => {
+    const s = this.state;
+    const primeiro = s.usuariosLista[0];
+    this.setState({ paginaAtual: 'dashboard', dashboardUsuarioId: s.dashboardUsuarioId || (primeiro && primeiro.id) || s.usuarioAtual.uid, dashboardVoltarDe: 'supervisor' });
+  };
+  voltarDoDashboard = () => this.setState({ paginaAtual: this.state.dashboardVoltarDe || 'funcionario' });
+  onDashboardUsuarioChange = (e) => this.setState({ dashboardUsuarioId: e.target.value });
+  getDashboardDados() {
+    const s = this.state;
+    const uid = s.dashboardUsuarioId;
+    if (!uid) return { itens: [], total: 0 };
+    const fonte = uid === s.usuarioAtual.uid ? s.lancamentos : s.lancamentosTodos.filter((l) => l.usuarioId === uid);
+    const grupos = {};
+    fonte.forEach((l) => {
+      const chave = this.ehFeria(l.tipoTarefa) ? 'Férias' : (l.contrato || l.cliente || 'Sem contrato');
+      grupos[chave] = (grupos[chave] || 0) + Number(l.horas || 0);
+    });
+    const cores = ['#10265c', '#2c7a3d', '#b48a7c', '#2c5aa0', '#a13a2c', '#7a5ca8', '#c98a2c', '#3a9ba1'];
+    const total = Object.values(grupos).reduce((a, b) => a + b, 0);
+    const itens = Object.keys(grupos).sort().map((label, i) => ({
+      label, horas: Math.round(grupos[label] * 10) / 10,
+      pct: total > 0 ? Math.round((grupos[label] / total) * 1000) / 10 : 0,
+      cor: cores[i % cores.length],
+    }));
+    return { itens, total };
+  }
 
   getContratosRawTodos() {
     return [...CONTRATOS_RAW, ...this.state.contratosExtras.map((c) => ({ contrato: c.codigo, nome: c.nome, tipo: '', cliente: c.cliente }))];
@@ -838,7 +969,27 @@ class Component extends DCLogic {
     this.setState({ contrato, projeto: projetos.length === 1 ? projetos[0] : '' });
   };
   onProjetoChange = (e) => this.setState({ projeto: e.target.value });
-  onDiaChange = (e) => this.setState({ diaTrabalho: e.target.value });
+  getDiaMinPermitido() {
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const cursor = new Date(hoje);
+    let uteis = 0;
+    while (uteis < 5) {
+      cursor.setDate(cursor.getDate() - 1);
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) uteis++;
+    }
+    return cursor.toISOString().slice(0, 10);
+  }
+  onDiaChange = (e) => {
+    const v = e.target.value;
+    const hojeStr = new Date().toISOString().slice(0, 10);
+    const minStr = this.getDiaMinPermitido();
+    if (v > hojeStr || v < minStr) {
+      this.setState({ mensagem: 'Data fora do período permitido para lançamento (até 5 dias úteis atrás e não além de hoje).', mensagemTipo: 'erro' });
+      return;
+    }
+    this.setState({ diaTrabalho: v });
+  };
   onHorasChange = (e) => {
     const v = e.target.value.replace(/[^0-9.,]/g, '');
     this.setState({ horasGastas: v });
@@ -1276,6 +1427,7 @@ class Component extends DCLogic {
 
   renderVals() {
     const s = this.state;
+    const dashboardCalc = this.getDashboardDados();
     const contratosDisponiveis = s.cliente ? (this.getContratosPorClienteTodos()[s.cliente] || []) : [];
     const projetosDisponiveis = s.contrato ? (this.getProjetosPorContratoTodos()[s.contrato] || []) : [];
     const mes = new Date(s.diaTrabalho + 'T00:00:00');
@@ -1286,6 +1438,8 @@ class Component extends DCLogic {
       onContratoChange: this.onContratoChange,
       onProjetoChange: this.onProjetoChange,
       onDiaChange: this.onDiaChange,
+      diaMinPermitido: this.getDiaMinPermitido(),
+      diaMaxPermitido: new Date().toISOString().slice(0, 10),
       onFeriasInicioChange: this.onFeriasInicioChange,
       onFeriasFimChange: this.onFeriasFimChange,
       onHorasChange: this.onHorasChange,
@@ -1411,6 +1565,23 @@ class Component extends DCLogic {
       isFuncionarioView: s.paginaAtual === 'funcionario',
       isSupervisorView: s.paginaAtual === 'supervisor',
       abrirLoginSupervisor: this.abrirLoginSupervisor,
+      isDashboardView: s.paginaAtual === 'dashboard',
+      dashboardMeses: this.getDashboardMeses(),
+      abrirDashboards: this.abrirDashboards,
+      voltarDoDashboard: this.voltarDoDashboard,
+      dashboardMostrarSeletor: s.dashboardVoltarDe === 'supervisor',
+      dashboardUsuarioId: s.dashboardUsuarioId,
+      onDashboardUsuarioChange: this.onDashboardUsuarioChange,
+      dashboardDados: dashboardCalc.itens,
+      dashboardVazio: dashboardCalc.total === 0,
+      dashboardGradiente: dashboardCalc.total === 0 ? '#eee' : (() => {
+        let acc = 0;
+        const partes = dashboardCalc.itens.map((d) => {
+          const inicio = acc; acc += (d.pct / 100) * 360;
+          return `${d.cor} ${inicio}deg ${acc}deg`;
+        });
+        return `conic-gradient(${partes.join(', ')})`;
+      })(),
       voltarParaFuncionario: this.voltarParaFuncionario,
       acumuladoTodos: this.getAcumuladoTodos(),
       semLancamentosTodos: this.getAcumuladoTodos().length === 0,
