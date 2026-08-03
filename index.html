@@ -376,9 +376,9 @@
           <div>{{ l.horas }}h</div>
           <div>{{ l.tipoTarefa }}</div>
           <div>{{ l.descricao }}</div>
-          <div>
-            <button onClick="{{ l.onEditar }}" style="padding: 6px 14px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 13px; cursor: pointer;">Editar</button>
-            <button onClick="{{ l.onExcluir }}" style="margin-left: 6px; padding: 6px 14px; border-radius: 8px; border: 1px solid #a13a2c; background: #fff; color: #a13a2c; font-size: 13px; cursor: pointer;">Excluir</button>
+          <div style="display: flex; gap: 6px; flex-wrap: nowrap;">
+            <button onClick="{{ l.onEditar }}" style="padding: 6px 14px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 13px; cursor: pointer; white-space: nowrap;">Editar</button>
+            <button onClick="{{ l.onExcluir }}" style="padding: 6px 14px; border-radius: 8px; border: 1px solid #a13a2c; background: #fff; color: #a13a2c; font-size: 13px; cursor: pointer; white-space: nowrap;">Excluir</button>
           </div>
         </div>
       </sc-for>
