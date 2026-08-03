@@ -357,7 +357,7 @@
       <div style="background: #eef2f9; padding: 14px 20px 18px; border-bottom: 1px solid #c7d1e6;">
         <div style="font-size: 16px; color: #10265c;">Acumulado para o período (últimos 5 dias)</div>
       </div>
-      <div style="display: grid; grid-template-columns: 1.2fr 1.4fr 1.1fr 1.2fr 1fr 1.3fr 1.6fr 0.8fr; gap: 8px; padding: 14px 20px; border-bottom: 1px solid #eee; font-weight: 600; color: #10265c; font-size: 14px;">
+      <div style="display: grid; grid-template-columns: 1.2fr 1.4fr 1.1fr 1.2fr 1fr 1.3fr 1.4fr 1.3fr; gap: 8px; padding: 14px 20px; border-bottom: 1px solid #eee; font-weight: 600; color: #10265c; font-size: 14px;">
         <div>Cliente</div>
         <div>Contrato</div>
         <div>Dia de Trabalho</div>
@@ -368,7 +368,7 @@
         <div>Ação</div>
       </div>
       <sc-for list="{{ acumuladoPeriodo }}" as="l" hint-placeholder-count="0">
-        <div style="display: grid; grid-template-columns: 1.2fr 1.4fr 1.1fr 1.2fr 1fr 1.3fr 1.6fr 0.8fr; gap: 8px; padding: 12px 20px; border-bottom: 1px solid #f2f2f2; font-size: 14px; color: #333; align-items: center;">
+        <div style="display: grid; grid-template-columns: 1.2fr 1.4fr 1.1fr 1.2fr 1fr 1.3fr 1.4fr 1.3fr; gap: 8px; padding: 12px 20px; border-bottom: 1px solid #f2f2f2; font-size: 14px; color: #333; align-items: center;">
           <div>{{ l.cliente }}</div>
           <div>{{ l.contrato }}</div>
           <div>{{ l.diaFormatado }}</div>
@@ -377,8 +377,8 @@
           <div>{{ l.tipoTarefa }}</div>
           <div>{{ l.descricao }}</div>
           <div style="display: flex; gap: 6px; flex-wrap: nowrap;">
-            <button onClick="{{ l.onEditar }}" style="padding: 6px 14px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 13px; cursor: pointer; white-space: nowrap;">Editar</button>
-            <button onClick="{{ l.onExcluir }}" style="padding: 6px 14px; border-radius: 8px; border: 1px solid #a13a2c; background: #fff; color: #a13a2c; font-size: 13px; cursor: pointer; white-space: nowrap;">Excluir</button>
+            <button onClick="{{ l.onEditar }}" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 13px; cursor: pointer; white-space: nowrap;">Editar</button>
+            <button onClick="{{ l.onExcluir }}" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #a13a2c; background: #fff; color: #a13a2c; font-size: 13px; cursor: pointer; white-space: nowrap;">Excluir</button>
           </div>
         </div>
       </sc-for>
