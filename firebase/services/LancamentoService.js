@@ -13,13 +13,13 @@ export const LancamentoService = {
   buscarPorId: base.buscarPorId,
   listarPorUsuario: async (usuarioId) => {
     const lista = await base.listarTodos(where('usuarioId', '==', usuarioId));
-    return lista.slice().sort((a, b) => (a.data || '').localeCompare(b.data || ''));
+    return lista.slice().sort((a, b) => (a.dia || '').localeCompare(b.dia || ''));
   },
   ouvirPorUsuario: (usuarioId, callback) => base.ouvirTodos(
-    (lista) => callback(lista.slice().sort((a, b) => (a.data || '').localeCompare(b.data || ''))),
+    (lista) => callback(lista.slice().sort((a, b) => (a.dia || '').localeCompare(b.dia || ''))),
     where('usuarioId', '==', usuarioId),
   ),
   // Painel da coordenação: histórico completo, todos os usuários
-  listarTodos: () => base.listarTodos(orderBy('data', 'asc')),
-  ouvirTodos: (callback) => base.ouvirTodos(callback, orderBy('data', 'asc')),
+  listarTodos: () => base.listarTodos(orderBy('dia', 'asc')),
+  ouvirTodos: (callback) => base.ouvirTodos(callback, orderBy('dia', 'asc')),
 };
