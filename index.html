@@ -1368,11 +1368,17 @@ class Component extends DCLogic {
     if (dados.length === 0) { this.setState({ mensagem: 'Não há lançamentos para exportar.', mensagemTipo: 'erro' }); return; }
     const colunas = ['Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
     const cabecalhos = ['Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
-    const linhas = dados.map((d, i) => `<tr style="background:${i % 2 === 0 ? '#f2f2f2' : '#ffffff'};">${colunas.map((c) => `<td style="padding:6px 10px;border:1px solid #bfbfbf;font-size:12px;text-align:center;">${d[c] ?? ''}</td>`).join('')}</tr>`).join('');
-    const html = `<html><head><meta charset="utf-8"><title>Apropriação de Horas</title></head><body style="font-family:Arial,sans-serif;">
-      <h2 style="background:#10265c;color:#fff;padding:10px 14px;margin:0 0 12px;">${this.getMesReferenciaTexto()}</h2>
-      <table style="border-collapse:collapse;width:100%;">
-        <thead><tr>${cabecalhos.map((c) => `<th style="padding:6px 10px;border:1px solid #bfbfbf;background:#b5493a;color:#fff;font-size:12px;text-align:center;">${c}</th>`).join('')}</tr></thead>
+    const linhas = dados.map((d, i) => `<tr style="background:${i % 2 === 0 ? '#f2f2f2' : '#ffffff'};">${colunas.map((c) => `<td style="padding:6px 10px;border:1px solid #bfbfbf;font-size:12px;text-align:center;vertical-align:middle;white-space:nowrap;">${d[c] ?? ''}</td>`).join('')}</tr>`).join('');
+    const html = `<html><head><meta charset="utf-8"><title>Apropriação de Horas</title>
+      <style>
+        @page { size: landscape; margin: 16px; }
+        body { font-family: Arial, sans-serif; margin: 0; }
+        table { border-collapse: collapse; width: auto; margin: 0 auto; table-layout: auto; }
+      </style>
+      </head><body>
+      <h2 style="background:#10265c;color:#fff;padding:10px 14px;margin:0 0 12px;text-align:center;font-weight:bold;">${this.getMesReferenciaTexto()}</h2>
+      <table>
+        <thead><tr>${cabecalhos.map((c) => `<th style="padding:6px 10px;border:1px solid #bfbfbf;background:#b5493a;color:#fff;font-size:12px;text-align:center;vertical-align:middle;white-space:nowrap;font-weight:bold;">${c}</th>`).join('')}</tr></thead>
         <tbody>${linhas}</tbody>
       </table>
     </body></html>`;
@@ -1422,7 +1428,7 @@ class Component extends DCLogic {
           nomeFuncionario: this.state.usuariosMapa[l.usuarioId] || 'Não informado',
         };
       })
-      .sort((a, b) => b.dia.localeCompare(a.dia));
+      .sort((a, b) => a.dia.localeCompare(b.dia) || a.nomeFuncionario.localeCompare(b.nomeFuncionario));
   }
 
   renderVals() {
