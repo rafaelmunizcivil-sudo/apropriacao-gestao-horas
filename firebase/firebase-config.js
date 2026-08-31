@@ -15,3 +15,4 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+auth.languageCode = 'pt-BR'; // e-mails de redefinição de senha, etc. em português
