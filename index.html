@@ -125,6 +125,10 @@
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+  if (window.emailjs) window.emailjs.init({ publicKey: 'LMJtfygKaGF8jkXzU' });
+</script>
 <script type="module" src="firebase/bridge.js"></script>
 </helmet>
 <sc-if value="{{ anyDropdownOpen }}" hint-placeholder-val="{{ false }}">
@@ -693,6 +697,28 @@
     <h1 style="margin: 0 0 24px; font-size: 40px; font-weight: 500; letter-spacing: -0.5px; color: #fff">Painel da Coordenação</h1>
     <div style="border-top: 1px solid #ffffff; margin-bottom: 24px;"></div>
 
+    <sc-if value="{{ temFuncionariosComPendencia }}" hint-placeholder-val="{{ false }}">
+    <div style="border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); border: 1px solid #f0c36d; margin-bottom: 24px;">
+      <div style="background: #fff7e6; padding: 14px 20px; border-bottom: 1px solid #f0c36d;">
+        <div style="font-size: 16px; color: #8a5a00; font-weight: 600;">⚠️ Funcionários com pendência de lançamento (2+ dias úteis sem preencher)</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr; gap: 8px; padding: 12px 20px; border-bottom: 1px solid #eee; font-weight: 600; color: #10265c; font-size: 13px;">
+        <div>Funcionário</div>
+        <div>Dia pendente</div>
+        <div>Dias úteis parado</div>
+        <div>Ação</div>
+      </div>
+      <sc-for list="{{ funcionariosComPendencia }}" as="p" hint-placeholder-count="1">
+        <div style="display: grid; grid-template-columns: 1.4fr 1fr 1fr 1.2fr; gap: 8px; padding: 12px 20px; border-bottom: 1px solid #f2f2f2; font-size: 14px; color: #333; align-items: center;">
+          <div>{{ p.nome }}</div>
+          <div>{{ p.diaPendenteFormatado }}</div>
+          <div>{{ p.diasUteisTranscorridos }}</div>
+          <div><button onClick="{{ p.onLiberarExcecao }}" style="padding: 6px 12px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 12px; cursor: pointer;">Liberar exceção</button></div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
     <div style="border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); border: 1px solid #e2e2e2;">
       <div style="background: #eef2f9; padding: 14px 20px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; row-gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #c7d1e6;">
         <div style="font-size: 16px; color: #10265c;">Acumulado para o período (histórico completo)</div>
@@ -813,7 +839,28 @@ const CONTRATOS_RAW = [
 
 function clienteChave(item) { return item.cliente === 'CONSOL' ? 'CONSOL' : (item.tipo ? `${item.tipo} ${item.cliente}` : item.cliente); }
 
-// Gera o código de identificação do funcionário: 3 primeiras letras do primeiro nome
+// Calcula a data da Páscoa (algoritmo de Meeus/Jones/Butcher — válido para o calendário gregoriano).
+// Usada para achar feriados móveis (Carnaval, Sexta-feira Santa, Corpus Christi) automaticamente,
+// sem precisar atualizar uma lista manual todo ano.
+function calcularPascoa(ano) {
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31);
+  const dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+}
+
+
 // + 3 últimas letras do último sobrenome (ex: "André Barcelos Guimarães" -> "Andães").
 function gerarCodigoFuncionario(nomeCompleto) {
   const partes = String(nomeCompleto || '').trim().split(/\s+/).filter(Boolean);
@@ -912,7 +959,7 @@ class Component extends DCLogic {
     confirmExcluirAberto: false, confirmExcluirLancamento: null,
     cadastroAberto: false, novoNome: '', novoEmail: '', novoPerfil: 'funcionario', cadastroMsg: '', cadastroErro: '', cadastroCarregando: false, cadastroModo: 'lista',
     usuariosMapa: {}, usuariosLista: [],
-    contratosExtras: [], atividadesExtras: [],
+    contratosExtras: [], atividadesExtras: [], excecoesPreenchimento: [],
     cadastroContratoAberto: false, novoContratoCodigo: '', novoContratoProjetos: [], novoContratoProjetoInput: '', novoContratoCliente: '', contratoMsg: '', contratoErro: '', contratoModo: 'lista',
     editandoContratoId: null, editandoContratoCodigo: '', editandoContratoProjetos: [], editandoContratoProjetoInput: '', editandoContratoCliente: '', editandoMsg: '', editandoErro: '',
     cadastroAtividadeAberto: false, novaAtivIdentificacao: '', novaAtivCodigo: '', novaAtivDescricao: '', atividadeMsg: '', atividadeErro: '', atividadeModo: 'lista',
@@ -940,12 +987,13 @@ class Component extends DCLogic {
     if (this._unsubLancamentosTodos) { this._unsubLancamentosTodos(); this._unsubLancamentosTodos = null; }
     if (this._unsubUsuarios) { this._unsubUsuarios(); this._unsubUsuarios = null; }
     if (this._unsubAtividades) { this._unsubAtividades(); this._unsubAtividades = null; }
+    if (this._unsubExcecoes) { this._unsubExcecoes(); this._unsubExcecoes = null; }
   }
 
   async aoMudarAuth(user) {
     this.pararEscutas();
     if (!user) {
-      this.setState({ usuarioAtual: null, carregandoAuth: false, lancamentos: [], lancamentosTodos: [], paginaAtual: 'funcionario' });
+      this.setState({ usuarioAtual: null, carregandoAuth: false, lancamentos: [], lancamentosTodos: [], paginaAtual: 'funcionario', excecoesPreenchimento: [] });
       return;
     }
     const perfilDoc = await this._FB.UsuarioService.buscarPorId(user.uid);
@@ -962,6 +1010,11 @@ class Component extends DCLogic {
     });
     this._unsubAtividades = this._FB.AtividadeService.ouvirTodos((lista) => {
       this.setState({ atividadesExtras: lista.map((a) => ({ id: a.id, identificacao: a.identificacaoContrato, codigo: a.codigo, descricao: a.descricao })) });
+    });
+    // Exceções de prazo: precisam estar disponíveis pra qualquer usuário logado
+    // (funcionário precisa saber se TEM uma exceção liberada pra ele; coordenação precisa ver/gerenciar todas).
+    this._unsubExcecoes = this._FB.ExcecaoPreenchimentoService.ouvirTodos((lista) => {
+      this.setState({ excecoesPreenchimento: lista });
     });
     if (usuarioAtual.perfil === 'supervisor' || usuarioAtual.perfil === 'administrador') {
       this._unsubLancamentosTodos = this._FB.LancamentoService.ouvirTodos((lista) => {
@@ -1044,7 +1097,10 @@ class Component extends DCLogic {
     }
   };
 
-  abrirLoginSupervisor = () => this.setState({ paginaAtual: 'supervisor' });
+  abrirLoginSupervisor = () => {
+    this.setState({ paginaAtual: 'supervisor' });
+    this.enviarLembretesPendencia();
+  };
   getDashboardMeses() {
     const s = this.state;
     const fonteBase = s.lancamentos;
@@ -1511,13 +1567,23 @@ class Component extends DCLogic {
   getDiaMinPermitido() {
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
     const cursor = new Date(hoje);
+    const feriadosCache = {};
     let uteis = 0;
     while (uteis < 5) {
       cursor.setDate(cursor.getDate() - 1);
       const dow = cursor.getDay();
-      if (dow !== 0 && dow !== 6) uteis++;
+      const ano = cursor.getFullYear();
+      if (!feriadosCache[ano]) feriadosCache[ano] = this.getFeriados(ano);
+      const iso = cursor.toISOString().slice(0, 10);
+      if (dow !== 0 && dow !== 6 && !feriadosCache[ano].has(iso)) uteis++;
     }
-    return cursor.toISOString().slice(0, 10);
+    // Se houver uma exceção liberada pela coordenação pra esse funcionário anterior a essa data, respeita a exceção.
+    const excecoes = this.state.excecoesPreenchimento || [];
+    const meuUid = this.state.usuarioAtual && this.state.usuarioAtual.uid;
+    const minhasExcecoes = excecoes.filter((ex) => ex.usuarioId === meuUid).map((ex) => ex.data);
+    const minCalculado = cursor.toISOString().slice(0, 10);
+    const dataMaisAntigaLiberada = minhasExcecoes.filter((d) => d < minCalculado).sort()[0];
+    return dataMaisAntigaLiberada || minCalculado;
   }
   onDiaChange = (e) => {
     const v = e.target.value;
@@ -1566,6 +1632,14 @@ class Component extends DCLogic {
     if (camposFaltando.length > 0) {
       this.setState({ mensagem: `Preencha o campo ${camposFaltando.join(', ')}. Todos os campos obrigatórios precisam ser preenchidos antes de salvar.`, mensagemTipo: 'erro' });
       return;
+    }
+    if (!isFeria) {
+      const hojeStr = new Date().toISOString().slice(0, 10);
+      const minStr = this.getDiaMinPermitido();
+      if (s.diaTrabalho > hojeStr || s.diaTrabalho < minStr) {
+        this.setState({ mensagem: 'Prazo de preenchimento encerrado para essa data (mais de 5 dias úteis). Fale com a coordenação se precisar de uma exceção.', mensagemTipo: 'erro' });
+        return;
+      }
     }
     if (isFeria && s.feriasFim < s.feriasInicio) {
       this.setState({ mensagem: 'A data de fim das férias não pode ser anterior ao início.', mensagemTipo: 'erro' });
@@ -1695,6 +1769,113 @@ class Component extends DCLogic {
   getDiaAnteriorPendente() {
     return this.getPrimeiroDiaPendente() !== null;
   }
+
+  // Função única de cálculo de dias úteis transcorridos entre uma data de referência (inclusive)
+  // e "hoje" (exclusive — hoje em si não entra na contagem). É a MESMA função usada tanto pra:
+  // 1) decidir se já passou da hora de mandar lembrete (>= 2 dias úteis);
+  // 2) decidir se o preenchimento ainda está dentro do prazo (getDiaMinPermitido, <= 5 dias úteis).
+  diasUteisTranscorridos(dataReferenciaStr, dataAtualStr) {
+    const dataRef = new Date(dataReferenciaStr + 'T00:00:00');
+    const dataAtual = new Date(dataAtualStr + 'T00:00:00');
+    if (dataAtual <= dataRef) return 0;
+    const feriadosCache = {};
+    let count = 0;
+    const cursor = new Date(dataRef);
+    while (cursor < dataAtual) {
+      const dow = cursor.getDay();
+      const ano = cursor.getFullYear();
+      if (!feriadosCache[ano]) feriadosCache[ano] = this.getFeriados(ano);
+      const iso = cursor.toISOString().slice(0, 10);
+      if (dow !== 0 && dow !== 6 && !feriadosCache[ano].has(iso)) count++;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return count;
+  }
+
+  // Pra cada funcionário ativo, acha o dia útil mais antigo (dentro da janela dos últimos 5 dias
+  // úteis) sem lançamento completo (< 8h), e calcula há quantos dias úteis isso está parado.
+  // Usado pelo painel da coordenação pra saber quem precisa de lembrete (>= 2 dias úteis).
+  getFuncionariosComPendencia() {
+    const hojeStr = new Date().toISOString().slice(0, 10);
+    const minPermitidoStr = this.getDiaMinPermitido();
+    const feriadosCache = {};
+    const excecoes = new Set((this.state.excecoesPreenchimento || []).map((ex) => `${ex.usuarioId}_${ex.data}`));
+    const lancamentosTodos = this.state.lancamentosTodos || [];
+
+    const resultado = [];
+    (this.state.usuariosLista || []).forEach((u) => {
+      if (u.perfil === 'administrador') return;
+      if (u.ativo === false) return;
+      const cursor = new Date(minPermitidoStr + 'T00:00:00');
+      const hoje = new Date(hojeStr + 'T00:00:00');
+      let diaPendente = null;
+      while (cursor < hoje) {
+        const dow = cursor.getDay();
+        const ano = cursor.getFullYear();
+        if (!feriadosCache[ano]) feriadosCache[ano] = this.getFeriados(ano);
+        const iso = cursor.toISOString().slice(0, 10);
+        if (dow !== 0 && dow !== 6 && !feriadosCache[ano].has(iso) && !excecoes.has(`${u.id}_${iso}`)) {
+          const totalHoras = lancamentosTodos.filter((l) => l.usuarioId === u.id && l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
+          if (totalHoras < 8) { diaPendente = iso; break; }
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      if (diaPendente) {
+        const diasUteis = this.diasUteisTranscorridos(diaPendente, hojeStr);
+        if (diasUteis >= 2) {
+          const [ano, mes, dia] = diaPendente.split('-');
+          resultado.push({
+            usuarioId: u.id,
+            nome: u.nome,
+            email: u.email,
+            diaPendente,
+            diaPendenteFormatado: `${dia}/${mes}/${ano}`,
+            diasUteisTranscorridos: diasUteis,
+          });
+        }
+      }
+    });
+    return resultado.sort((a, b) => b.diasUteisTranscorridos - a.diasUteisTranscorridos);
+  }
+
+  liberarExcecaoPreenchimento = async (usuarioId, data) => {
+    const s = this.state;
+    try {
+      await this._FB.ExcecaoPreenchimentoService.liberar({
+        usuarioId, data,
+        motivo: '',
+        liberadoPorUid: s.usuarioAtual.uid,
+        liberadoPorNome: s.usuarioAtual.nome,
+      });
+      this.setState({ mensagem: 'Exceção liberada. O funcionário já pode preencher essa data.', mensagemTipo: 'sucesso' });
+    } catch (e) {
+      this.setState({ mensagem: 'Não foi possível liberar a exceção. Tente novamente.', mensagemTipo: 'erro' });
+    }
+  };
+
+  // Dispara lembretes por e-mail (via EmailJS) pra quem está pendente, no máximo 1x por dia por pessoa.
+  // Só roda quando a coordenação abre o painel (não é um "vigia" automático 24h).
+  enviarLembretesPendencia = async () => {
+    if (!window.emailjs) return; // biblioteca ainda carregando, tenta na próxima abertura do painel
+    const hojeStr = new Date().toISOString().slice(0, 10);
+    const pendentes = this.getFuncionariosComPendencia();
+    for (const p of pendentes) {
+      const usuario = (this.state.usuariosLista || []).find((u) => u.id === p.usuarioId);
+      if (!usuario || !usuario.email) continue;
+      if (usuario.ultimoLembreteEnviado === hojeStr) continue; // já mandou hoje, respeita o limite de 1x/dia
+      try {
+        await window.emailjs.send('service_m8ml71k', '35m2ece', {
+          email_funcionario: usuario.email,
+          nome_funcionario: p.nome,
+          dias_sem_lancar: p.diasUteisTranscorridos,
+          dia_pendente: p.diaPendenteFormatado,
+        });
+        await this._FB.UsuarioService.atualizar(p.usuarioId, { ultimoLembreteEnviado: hojeStr });
+      } catch (e) {
+        console.error('Falha ao enviar lembrete de pendência para', p.nome, e);
+      }
+    }
+  };
 
   getDiaAnteriorFormatado() {
     const d = this.getPrimeiroDiaPendente();
@@ -1985,11 +2166,34 @@ class Component extends DCLogic {
   };
 
   getFeriados(ano) {
-    // Feriados nacionais + municipais de Belo Horizonte (datas móveis calculadas quando necessário)
-    const fixos = {
-      2026: ['2026-01-01', '2026-02-16', '2026-02-17', '2026-04-03', '2026-04-21', '2026-05-01', '2026-06-04', '2026-08-15', '2026-09-07', '2026-10-12', '2026-11-02', '2026-11-15', '2026-12-08', '2026-12-25'],
+    // Feriados nacionais + municipais de Belo Horizonte.
+    // Fixos: mesma data todo ano. Móveis: calculados a partir da Páscoa (funciona pra qualquer ano, sem manutenção).
+    const fixos = [
+      `${ano}-01-01`, // Confraternização Universal
+      `${ano}-04-21`, // Tiradentes
+      `${ano}-05-01`, // Dia do Trabalho
+      `${ano}-08-15`, // Assunção de Nossa Senhora (Nossa Senhora da Boa Viagem — padroeira de BH)
+      `${ano}-09-07`, // Independência do Brasil
+      `${ano}-10-12`, // Nossa Senhora Aparecida
+      `${ano}-11-02`, // Finados
+      `${ano}-11-15`, // Proclamação da República
+      `${ano}-11-20`, // Dia Nacional de Zumbi e da Consciência Negra
+      `${ano}-12-08`, // Imaculada Conceição (BH)
+      `${ano}-12-25`, // Natal
+    ];
+    const pascoa = calcularPascoa(ano);
+    const addDias = (dias) => {
+      const d = new Date(pascoa);
+      d.setDate(d.getDate() + dias);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     };
-    return new Set(fixos[ano] || fixos[2026]);
+    const moveis = [
+      addDias(-48), // Segunda-feira de Carnaval (ponto facultativo, mas a Consol emenda)
+      addDias(-47), // Terça-feira de Carnaval (idem)
+      addDias(-2),  // Sexta-feira Santa
+      addDias(60),  // Corpus Christi (ponto facultativo, mas a Consol emenda)
+    ];
+    return new Set([...fixos, ...moveis]);
   }
 
   gerarPlanilhaHorasFunc() {
@@ -2313,6 +2517,7 @@ class Component extends DCLogic {
     const metaMesCalc = this.getMetaMes();
     const diaAnteriorPendenteCalc = this.getDiaAnteriorPendente();
     const diasPendentesMesCalc = this.getDiasPendentesMes();
+    const funcionariosComPendenciaCalc = s.paginaAtual === 'supervisor' ? this.getFuncionariosComPendencia() : [];
     return {
       ...s,
       onClienteChange: this.onClienteChange,
@@ -2483,6 +2688,11 @@ class Component extends DCLogic {
       atividadeErro: s.atividadeErro,
       isFuncionarioView: s.paginaAtual === 'funcionario',
       isSupervisorView: s.paginaAtual === 'supervisor',
+      funcionariosComPendencia: funcionariosComPendenciaCalc.map((p) => ({
+        ...p,
+        onLiberarExcecao: () => this.liberarExcecaoPreenchimento(p.usuarioId, p.diaPendente),
+      })),
+      temFuncionariosComPendencia: funcionariosComPendenciaCalc.length > 0,
       abrirLoginSupervisor: this.abrirLoginSupervisor,
       isDashboardView: s.paginaAtual === 'dashboard',
       dashboardMeses: this.getDashboardMeses(),
