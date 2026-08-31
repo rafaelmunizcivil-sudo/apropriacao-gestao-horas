@@ -738,7 +738,22 @@
     <img src="assets/logo-consol.png" alt="Consol Engenheiros Consultores" style="height: 40px; width: auto; margin-bottom: 20px;">
     <div style="font-size: 20px; font-weight: 600; color: #10265c; margin-bottom: 16px;">Entrar</div>
     <input type="email" placeholder="E-mail" value="{{ loginEmail }}" onChange="{{ onLoginEmailChange }}" onKeyDown="{{ onLoginKeyDown }}" style="width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px; margin-bottom: 10px;">
-    <input type="password" placeholder="Senha" value="{{ loginSenha }}" onChange="{{ onLoginSenhaChange }}" onKeyDown="{{ onLoginKeyDown }}" style="width: 100%; box-sizing: border-box; padding: 12px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px; margin-bottom: 10px;">
+    <div style="position: relative; margin-bottom: 10px;">
+      <sc-if value="{{ mostrarLoginSenha }}" hint-placeholder-val="{{ false }}">
+        <input type="text" placeholder="Senha" value="{{ loginSenha }}" onChange="{{ onLoginSenhaChange }}" onKeyDown="{{ onLoginKeyDown }}" style="width: 100%; box-sizing: border-box; padding: 12px 42px 12px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px;">
+      </sc-if>
+      <sc-if value="{{ !mostrarLoginSenha }}" hint-placeholder-val="{{ false }}">
+        <input type="password" placeholder="Senha" value="{{ loginSenha }}" onChange="{{ onLoginSenhaChange }}" onKeyDown="{{ onLoginKeyDown }}" style="width: 100%; box-sizing: border-box; padding: 12px 42px 12px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px;">
+      </sc-if>
+      <button type="button" onClick="{{ toggleMostrarLoginSenha }}" title="Mostrar/ocultar senha" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; color: #6b7280;">
+        <sc-if value="{{ mostrarLoginSenha }}" hint-placeholder-val="{{ false }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+        </sc-if>
+        <sc-if value="{{ !mostrarLoginSenha }}" hint-placeholder-val="{{ false }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        </sc-if>
+      </button>
+    </div>
     <sc-if value="{{ loginErro }}" hint-placeholder-val="{{ false }}">
       <div style="color: #a13a2c; font-size: 13px; margin-bottom: 10px;">{{ loginErro }}</div>
     </sc-if>
@@ -865,7 +880,7 @@ class Component extends DCLogic {
     ultimoRelatorioTimestamp: Number(localStorage.getItem('apropia_ultimo_relatorio')) || null,
     paginaAtual: 'funcionario',
     carregandoAuth: true, usuarioAtual: null,
-    loginEmail: '', loginSenha: '', loginErro: '', loginCarregando: false,
+    loginEmail: '', loginSenha: '', loginErro: '', loginCarregando: false, mostrarLoginSenha: false,
     esqueciSenhaAberto: false, esqueciSenhaEmail: '', esqueciSenhaMsg: '',
     trocarSenhaAberto: false, novaSenha: '', trocarSenhaMsg: '', trocarSenhaErro: '', mostrarNovaSenha: false,
     confirmExcluirAberto: false, confirmExcluirLancamento: null,
@@ -938,6 +953,7 @@ class Component extends DCLogic {
   onLoginSenhaChange = (e) => this.setState({ loginSenha: e.target.value, loginErro: '' });
 
   onLoginKeyDown = (e) => { if (e.key === 'Enter') this.fazerLogin(); };
+  toggleMostrarLoginSenha = () => this.setState({ mostrarLoginSenha: !this.state.mostrarLoginSenha });
 
   fazerLogin = async () => {
     const { loginEmail, loginSenha } = this.state;
