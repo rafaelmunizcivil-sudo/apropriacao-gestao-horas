@@ -140,7 +140,22 @@
   <div style="position: fixed; inset: 0; background: rgba(16,38,92,0.5); display: flex; align-items: center; justify-content: center; z-index: 50;">
     <div style="background: #fff; border-radius: 14px; padding: 28px; width: 340px; box-shadow: 0 12px 30px rgba(0,0,0,0.25);">
       <div style="font-size: 18px; font-weight: 600; color: #10265c; margin-bottom: 8px;">Trocar senha</div>
-      <input type="password" placeholder="Nova senha (mín. 6 caracteres)" value="{{ novaSenha }}" onChange="{{ onNovaSenhaChange }}" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px; margin-bottom: 8px;">
+      <div style="position: relative; margin-bottom: 8px;">
+        <sc-if value="{{ mostrarNovaSenha }}" hint-placeholder-val="{{ false }}">
+          <input type="text" placeholder="Nova senha (mín. 6 caracteres)" value="{{ novaSenha }}" onChange="{{ onNovaSenhaChange }}" style="width: 100%; box-sizing: border-box; padding: 10px 42px 10px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px;">
+        </sc-if>
+        <sc-if value="{{ !mostrarNovaSenha }}" hint-placeholder-val="{{ false }}">
+          <input type="password" placeholder="Nova senha (mín. 6 caracteres)" value="{{ novaSenha }}" onChange="{{ onNovaSenhaChange }}" style="width: 100%; box-sizing: border-box; padding: 10px 42px 10px 14px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 16px;">
+        </sc-if>
+        <button type="button" onClick="{{ toggleMostrarNovaSenha }}" title="Mostrar/ocultar senha" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; color: #6b7280;">
+          <sc-if value="{{ mostrarNovaSenha }}" hint-placeholder-val="{{ false }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+          </sc-if>
+          <sc-if value="{{ !mostrarNovaSenha }}" hint-placeholder-val="{{ false }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </sc-if>
+        </button>
+      </div>
       <sc-if value="{{ trocarSenhaErro }}" hint-placeholder-val="{{ false }}">
         <div style="color: #a13a2c; font-size: 13px; margin-bottom: 8px;">{{ trocarSenhaErro }}</div>
       </sc-if>
@@ -852,7 +867,7 @@ class Component extends DCLogic {
     carregandoAuth: true, usuarioAtual: null,
     loginEmail: '', loginSenha: '', loginErro: '', loginCarregando: false,
     esqueciSenhaAberto: false, esqueciSenhaEmail: '', esqueciSenhaMsg: '',
-    trocarSenhaAberto: false, novaSenha: '', trocarSenhaMsg: '', trocarSenhaErro: '',
+    trocarSenhaAberto: false, novaSenha: '', trocarSenhaMsg: '', trocarSenhaErro: '', mostrarNovaSenha: false,
     confirmExcluirAberto: false, confirmExcluirLancamento: null,
     cadastroAberto: false, novoNome: '', novoEmail: '', novoPerfil: 'funcionario', cadastroMsg: '', cadastroErro: '', cadastroCarregando: false, cadastroModo: 'lista',
     usuariosMapa: {}, usuariosLista: [],
@@ -953,9 +968,10 @@ class Component extends DCLogic {
     }
   };
 
-  abrirTrocarSenha = () => this.setState({ trocarSenhaAberto: true, novaSenha: '', trocarSenhaMsg: '', trocarSenhaErro: '' });
+  abrirTrocarSenha = () => this.setState({ trocarSenhaAberto: true, novaSenha: '', trocarSenhaMsg: '', trocarSenhaErro: '', mostrarNovaSenha: false });
   fecharTrocarSenha = () => this.setState({ trocarSenhaAberto: false });
   onNovaSenhaChange = (e) => this.setState({ novaSenha: e.target.value, trocarSenhaErro: '' });
+  toggleMostrarNovaSenha = () => this.setState({ mostrarNovaSenha: !this.state.mostrarNovaSenha });
   confirmarTrocaSenha = async () => {
     if (this.state.novaSenha.length < 6) { this.setState({ trocarSenhaErro: 'A senha precisa ter ao menos 6 caracteres.' }); return; }
     try {
