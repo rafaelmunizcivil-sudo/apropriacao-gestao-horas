@@ -126,9 +126,6 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script>
-  if (window.emailjs) window.emailjs.init({ publicKey: 'LMJtfygKaGF8jkXzU' });
-</script>
 <script type="module" src="firebase/bridge.js"></script>
 </helmet>
 <sc-if value="{{ anyDropdownOpen }}" hint-placeholder-val="{{ false }}">
@@ -838,6 +835,23 @@ const CONTRATOS_RAW = [
 ];
 
 function clienteChave(item) { return item.cliente === 'CONSOL' ? 'CONSOL' : (item.tipo ? `${item.tipo} ${item.cliente}` : item.cliente); }
+
+// Espera a biblioteca do EmailJS terminar de carregar (ela chega via <script> de forma assíncrona,
+// então pode ainda não existir no exato momento em que o painel é aberto) e garante que
+// emailjs.init() só é chamado uma vez, exatamente quando ela já existe — evita a corrida que fazia
+// o envio falhar com "The public key is required".
+async function esperarEmailJS(timeoutMs = 8000) {
+  const inicio = Date.now();
+  while (!window.emailjs) {
+    if (Date.now() - inicio > timeoutMs) return false;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  if (!window.__dcEmailjsInit) {
+    window.emailjs.init({ publicKey: 'LMJtfygKaGF8jkXzU' });
+    window.__dcEmailjsInit = true;
+  }
+  return true;
+}
 
 // Calcula a data da Páscoa (algoritmo de Meeus/Jones/Butcher — válido para o calendário gregoriano).
 // Usada para achar feriados móveis (Carnaval, Sexta-feira Santa, Corpus Christi) automaticamente,
@@ -1856,7 +1870,8 @@ class Component extends DCLogic {
   // Dispara lembretes por e-mail (via EmailJS) pra quem está pendente, no máximo 1x por dia por pessoa.
   // Só roda quando a coordenação abre o painel (não é um "vigia" automático 24h).
   enviarLembretesPendencia = async () => {
-    if (!window.emailjs) return; // biblioteca ainda carregando, tenta na próxima abertura do painel
+    const pronto = await esperarEmailJS();
+    if (!pronto) return; // biblioteca não carregou a tempo, tenta na próxima abertura do painel
     const hojeStr = new Date().toISOString().slice(0, 10);
     const pendentes = this.getFuncionariosComPendencia();
     for (const p of pendentes) {
