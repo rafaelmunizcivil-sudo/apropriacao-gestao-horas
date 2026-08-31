@@ -1859,23 +1859,56 @@ class Component extends DCLogic {
 
     const colunas = ['Codigo', 'Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
     const cabecalhos = ['Código', 'Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
-    const nColunas = colunas.length;
+    const nColunasBase = colunas.length;
+    // Colunas extras: só cabeçalho, sem preenchimento — agrupadas em 2 blocos de 2 colunas cada.
+    const gruposExtras = [
+      { titulo: 'Custos Unitários', subs: ['Sem Encargos', 'Com Encargos'] },
+      { titulo: 'Custo Mensal', subs: ['Sem Encargos', 'Com Encargos'] },
+    ];
+    const nColunasExtras = gruposExtras.reduce((acc, g) => acc + g.subs.length, 0);
+    const nColunas = nColunasBase + nColunasExtras;
+
+    const linhaGrupos = new Array(nColunasBase).fill('');
+    const linhaSubs = new Array(nColunasBase).fill('');
+    gruposExtras.forEach((g) => {
+      linhaGrupos.push(g.titulo, ...new Array(g.subs.length - 1).fill(''));
+      linhaSubs.push(...g.subs);
+    });
+
     const linhas = [
       [this.getMesReferenciaTexto()],
-      cabecalhos,
-      ...dados.map((d) => colunas.map((c) => d[c])),
+      [...cabecalhos, ...linhaGrupos.slice(nColunasBase)],
+      linhaSubs,
+      ...dados.map((d) => [...colunas.map((c) => d[c]), ...new Array(nColunasExtras).fill('')]),
     ];
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
 
-    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
-    ws['!cols'] = colunas.map((c) => {
-      const maiorConteudo = Math.max(
-        c.length,
-        ...dados.map((d) => String(d[c] ?? '').length),
-      );
-      return { wch: Math.max(maiorConteudo + 4, 12) };
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }, // título
+    ];
+    // Cabeçalhos das colunas base (A-H) ocupam as duas linhas de cabeçalho (mescla vertical).
+    for (let c = 0; c < nColunasBase; c++) {
+      ws['!merges'].push({ s: { r: 1, c }, e: { r: 2, c } });
+    }
+    // Cabeçalhos dos grupos extras mesclados horizontalmente na linha 1.
+    let colAtual = nColunasBase;
+    gruposExtras.forEach((g) => {
+      ws['!merges'].push({ s: { r: 1, c: colAtual }, e: { r: 1, c: colAtual + g.subs.length - 1 } });
+      colAtual += g.subs.length;
     });
-    ws['!rows'] = [{ hpx: 22 }, { hpx: 22 }];
+
+    const larguraExtras = gruposExtras.flatMap((g) => g.subs).map((sub) => ({ wch: Math.max(sub.length + 4, 14) }));
+    ws['!cols'] = [
+      ...colunas.map((c) => {
+        const maiorConteudo = Math.max(
+          c.length,
+          ...dados.map((d) => String(d[c] ?? '').length),
+        );
+        return { wch: Math.max(maiorConteudo + 4, 12) };
+      }),
+      ...larguraExtras,
+    ];
+    ws['!rows'] = [{ hpx: 22 }, { hpx: 22 }, { hpx: 22 }];
 
     const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
     const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
@@ -1897,12 +1930,16 @@ class Component extends DCLogic {
       const refTitulo = window.XLSX.utils.encode_cell({ r: 0, c });
       if (ws[refTitulo]) ws[refTitulo].s = estiloTitulo;
       else ws[refTitulo] = { t: 's', v: '', s: estiloTitulo };
-      const refCabecalho = window.XLSX.utils.encode_cell({ r: 1, c });
-      if (ws[refCabecalho]) ws[refCabecalho].s = estiloCabecalho;
+      const refCabecalho1 = window.XLSX.utils.encode_cell({ r: 1, c });
+      if (ws[refCabecalho1]) ws[refCabecalho1].s = estiloCabecalho;
+      else ws[refCabecalho1] = { t: 's', v: '', s: estiloCabecalho };
+      const refCabecalho2 = window.XLSX.utils.encode_cell({ r: 2, c });
+      if (ws[refCabecalho2]) ws[refCabecalho2].s = estiloCabecalho;
+      else ws[refCabecalho2] = { t: 's', v: '', s: estiloCabecalho };
     }
 
-    for (let r = 2; r < linhas.length; r++) {
-      const par = (r - 2) % 2 === 0;
+    for (let r = 3; r < linhas.length; r++) {
+      const par = (r - 3) % 2 === 0;
       const estiloDado = {
         alignment: { horizontal: 'center', vertical: 'center' },
         border: bordasTodas,
@@ -1911,6 +1948,7 @@ class Component extends DCLogic {
       for (let c = 0; c < nColunas; c++) {
         const ref = window.XLSX.utils.encode_cell({ r, c });
         if (ws[ref]) ws[ref].s = estiloDado;
+        else ws[ref] = { t: 's', v: '', s: estiloDado };
       }
     }
 
@@ -2199,7 +2237,17 @@ class Component extends DCLogic {
     }
     const colunas = ['Codigo', 'Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
     const cabecalhos = ['Código', 'Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
-    const linhas = dados.map((d, i) => `<tr style="background:${i % 2 === 0 ? '#f2f2f2' : '#ffffff'};">${colunas.map((c) => `<td style="padding:6px 8px;border:1px solid #bfbfbf;font-size:11px;text-align:center;vertical-align:middle;word-break:break-word;">${d[c] ?? ''}</td>`).join('')}</tr>`).join('');
+    const gruposExtras = [
+      { titulo: 'Custos Unitários', subs: ['Sem Encargos', 'Com Encargos'] },
+      { titulo: 'Custo Mensal', subs: ['Sem Encargos', 'Com Encargos'] },
+    ];
+    const nColunasExtras = gruposExtras.reduce((acc, g) => acc + g.subs.length, 0);
+    const thBase = 'padding:6px 8px;border:1px solid #bfbfbf;background:#b5493a;color:#fff;font-size:11px;text-align:center;vertical-align:middle;word-break:break-word;font-weight:bold;';
+    const linhaHeader1 = cabecalhos.map((c) => `<th rowspan="2" style="${thBase}">${c}</th>`).join('')
+      + gruposExtras.map((g) => `<th colspan="${g.subs.length}" style="${thBase}">${g.titulo}</th>`).join('');
+    const linhaHeader2 = gruposExtras.flatMap((g) => g.subs).map((s) => `<th style="${thBase}">${s}</th>`).join('');
+    const tdExtras = new Array(nColunasExtras).fill('<td style="padding:6px 8px;border:1px solid #bfbfbf;font-size:11px;text-align:center;vertical-align:middle;"></td>').join('');
+    const linhas = dados.map((d, i) => `<tr style="background:${i % 2 === 0 ? '#f2f2f2' : '#ffffff'};">${colunas.map((c) => `<td style="padding:6px 8px;border:1px solid #bfbfbf;font-size:11px;text-align:center;vertical-align:middle;word-break:break-word;">${d[c] ?? ''}</td>`).join('')}${tdExtras}</tr>`).join('');
     const html = `<html><head><meta charset="utf-8"><title>Apropriação de Horas</title>
       <style>
         @page { size: A4 portrait; margin: 3cm 2cm 2cm 3cm; }
@@ -2215,7 +2263,7 @@ class Component extends DCLogic {
       </div>
       <h2 style="background:#10265c;color:#fff;padding:10px 14px;margin:0 0 12px;text-align:center;font-weight:bold;">${this.getMesReferenciaTexto()}</h2>
       <table>
-        <thead><tr>${cabecalhos.map((c) => `<th style="padding:6px 8px;border:1px solid #bfbfbf;background:#b5493a;color:#fff;font-size:11px;text-align:center;vertical-align:middle;word-break:break-word;font-weight:bold;">${c}</th>`).join('')}</tr></thead>
+        <thead><tr>${linhaHeader1}</tr><tr>${linhaHeader2}</tr></thead>
         <tbody>${linhas}</tbody>
       </table>
     </body></html>`;
