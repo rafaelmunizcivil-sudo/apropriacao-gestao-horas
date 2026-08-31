@@ -813,6 +813,32 @@ const CONTRATOS_RAW = [
 
 function clienteChave(item) { return item.cliente === 'CONSOL' ? 'CONSOL' : (item.tipo ? `${item.tipo} ${item.cliente}` : item.cliente); }
 
+// Gera o código de identificação do funcionário: 3 primeiras letras do primeiro nome
+// + 3 últimas letras do último sobrenome (ex: "André Barcelos Guimarães" -> "Andães").
+function gerarCodigoFuncionario(nomeCompleto) {
+  const partes = String(nomeCompleto || '').trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '';
+  const primeiroNome = partes[0];
+  const ultimoSobrenome = partes[partes.length - 1];
+  return primeiroNome.slice(0, 3) + ultimoSobrenome.slice(-3);
+}
+
+// Verifica se, entre os nomes informados, existe colisão de código gerado.
+// Retorna a lista de nomes envolvidos em duplicidade (vazia se não houver conflito).
+function verificarCodigosDuplicados(nomes) {
+  const porCodigo = {};
+  for (const nome of nomes) {
+    const codigo = gerarCodigoFuncionario(nome);
+    if (!codigo) continue;
+    (porCodigo[codigo] = porCodigo[codigo] || []).push(nome);
+  }
+  const duplicados = [];
+  for (const codigo in porCodigo) {
+    if (porCodigo[codigo].length > 1) duplicados.push({ codigo, nomes: porCodigo[codigo] });
+  }
+  return duplicados;
+}
+
 function ordenarClientes(lista) {
   const ordemGrupo = { P: 0, S: 1, M: 2 };
   const consol = lista.filter((c) => c === 'CONSOL');
@@ -1761,8 +1787,10 @@ class Component extends DCLogic {
       })
       .map((l) => {
         const d = new Date(l.dia + 'T00:00:00');
+        const nomeFuncionario = this.state.usuariosMapa[l.usuarioId] || 'Não informado';
         return {
-          Funcionario: this.state.usuariosMapa[l.usuarioId] || 'Não informado',
+          Codigo: gerarCodigoFuncionario(nomeFuncionario),
+          Funcionario: nomeFuncionario,
           Cliente: l.cliente,
           Contrato: l.contrato,
           Projeto: l.projeto,
@@ -1823,8 +1851,14 @@ class Component extends DCLogic {
     if (dados.length === 0) { this.setState({ mensagem: 'Não há lançamentos para exportar.', mensagemTipo: 'erro' }); return; }
     if (!window.XLSX || !window.JSZip) { this.setState({ mensagem: 'Biblioteca de Excel ainda carregando, tente novamente em instantes.', mensagemTipo: 'erro' }); return; }
 
-    const colunas = ['Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
-    const cabecalhos = ['Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
+    const duplicados = verificarCodigosDuplicados(Object.values(this.state.usuariosMapa));
+    if (duplicados.length > 0) {
+      const detalhe = duplicados.map((d) => `"${d.codigo}" (${d.nomes.join(', ')})`).join('; ');
+      this.setState({ mensagem: `Atenção: código de funcionário duplicado — ${detalhe}. A exportação continuou, mas revise os nomes.`, mensagemTipo: 'erro' });
+    }
+
+    const colunas = ['Codigo', 'Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
+    const cabecalhos = ['Código', 'Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
     const nColunas = colunas.length;
     const linhas = [
       [this.getMesReferenciaTexto()],
@@ -2158,8 +2192,13 @@ class Component extends DCLogic {
   exportarPDF = () => {
     const dados = this.getTodosLancamentosFormatados();
     if (dados.length === 0) { this.setState({ mensagem: 'Não há lançamentos para exportar.', mensagemTipo: 'erro' }); return; }
-    const colunas = ['Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
-    const cabecalhos = ['Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
+    const duplicados = verificarCodigosDuplicados(Object.values(this.state.usuariosMapa));
+    if (duplicados.length > 0) {
+      const detalhe = duplicados.map((d) => `"${d.codigo}" (${d.nomes.join(', ')})`).join('; ');
+      this.setState({ mensagem: `Atenção: código de funcionário duplicado — ${detalhe}. A exportação continuou, mas revise os nomes.`, mensagemTipo: 'erro' });
+    }
+    const colunas = ['Codigo', 'Funcionario', 'Cliente', 'Contrato', 'Projeto', 'DiaTrabalho', 'HorasTrabalhadas', 'TipoTarefa'];
+    const cabecalhos = ['Código', 'Funcionário', 'Cliente', 'Contrato', 'Projeto', 'Dia Trabalhado', 'Horas Trabalhadas', 'Tipo Tarefa'];
     const linhas = dados.map((d, i) => `<tr style="background:${i % 2 === 0 ? '#f2f2f2' : '#ffffff'};">${colunas.map((c) => `<td style="padding:6px 8px;border:1px solid #bfbfbf;font-size:11px;text-align:center;vertical-align:middle;word-break:break-word;">${d[c] ?? ''}</td>`).join('')}</tr>`).join('');
     const html = `<html><head><meta charset="utf-8"><title>Apropriação de Horas</title>
       <style>
