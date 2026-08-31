@@ -1879,7 +1879,7 @@ class Component extends DCLogic {
       if (!usuario || !usuario.email) continue;
       if (usuario.ultimoLembreteEnviado === hojeStr) continue; // já mandou hoje, respeita o limite de 1x/dia
       try {
-        await window.emailjs.send('service_m8ml71k', '35m2ece', {
+        await window.emailjs.send('service_m8ml71k', 'template_v00hyfi', {
           email_funcionario: usuario.email,
           nome_funcionario: p.nome,
           dias_sem_lancar: p.diasUteisTranscorridos,
