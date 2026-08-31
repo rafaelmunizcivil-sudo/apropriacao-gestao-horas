@@ -12,6 +12,7 @@ import { AtividadeService } from './services/AtividadeService.js';
 import { UsuarioService } from './services/UsuarioService.js';
 import { LancamentoService } from './services/LancamentoService.js';
 import { HistoricoService } from './services/HistoricoService.js';
+import { ExcecaoPreenchimentoService } from './services/ExcecaoPreenchimentoService.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDrFgJPEkTPsdicMH11wfVNI-Dk9sTby-M',
@@ -55,6 +56,6 @@ window.FB = {
   updatePassword: (novaSenha) => updatePassword(auth.currentUser, novaSenha),
   criarFuncionario,
   ClienteService, ContratoService, ProjetoService, AtividadeService,
-  UsuarioService, LancamentoService, HistoricoService,
+  UsuarioService, LancamentoService, HistoricoService, ExcecaoPreenchimentoService,
 };
 window.dispatchEvent(new Event('fb-ready'));
