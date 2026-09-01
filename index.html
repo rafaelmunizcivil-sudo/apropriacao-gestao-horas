@@ -1746,6 +1746,7 @@ class Component extends DCLogic {
       const d = new Date(hoje);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().slice(0, 10);
+      if (iso < DATA_INICIO_SISTEMA) continue; // não mostra dias do período de teste (apagado)
       const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
       const label = `${this.diasDaSemana[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
       const ok = totalHoras >= 8;
