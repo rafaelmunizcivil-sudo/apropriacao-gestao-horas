@@ -853,6 +853,11 @@ async function esperarEmailJS(timeoutMs = 8000) {
   return true;
 }
 
+// Data em que o sistema passou a valer "pra valer" (fim do período de teste/piloto).
+// Nenhuma regra de prazo, aviso de pendência ou lembrete por e-mail deve olhar pra
+// datas anteriores a essa — esse histórico foi apagado de propósito.
+const DATA_INICIO_SISTEMA = '2026-09-01';
+
 // Calcula a data da Páscoa (algoritmo de Meeus/Jones/Butcher — válido para o calendário gregoriano).
 // Usada para achar feriados móveis (Carnaval, Sexta-feira Santa, Corpus Christi) automaticamente,
 // sem precisar atualizar uma lista manual todo ano.
@@ -1596,8 +1601,11 @@ class Component extends DCLogic {
     const meuUid = this.state.usuarioAtual && this.state.usuarioAtual.uid;
     const minhasExcecoes = excecoes.filter((ex) => ex.usuarioId === meuUid).map((ex) => ex.data);
     const minCalculado = cursor.toISOString().slice(0, 10);
-    const dataMaisAntigaLiberada = minhasExcecoes.filter((d) => d < minCalculado).sort()[0];
-    return dataMaisAntigaLiberada || minCalculado;
+    // Nunca considera datas anteriores ao início oficial do sistema (o período de teste
+    // foi apagado — não faz sentido pedir preenchimento ou liberar exceção pra ele).
+    const piso = minCalculado < DATA_INICIO_SISTEMA ? DATA_INICIO_SISTEMA : minCalculado;
+    const dataMaisAntigaLiberada = minhasExcecoes.filter((d) => d < piso && d >= DATA_INICIO_SISTEMA).sort()[0];
+    return dataMaisAntigaLiberada || piso;
   }
   onDiaChange = (e) => {
     const v = e.target.value;
