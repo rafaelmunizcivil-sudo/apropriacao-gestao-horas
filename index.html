@@ -903,6 +903,9 @@ const HORAS_DIA_POR_EMAIL = {
   'bernardo@consol.eng.br': 6,
   'denise@consol.eng.br': 6,
 };
+// O sistema só tem dados válidos a partir dessa data. Nenhuma trava,
+// contagem de pendência ou calendário deve olhar pra antes disso.
+const DATA_INICIO_SISTEMA = '2026-09-01';
 
 class Component extends DCLogic {
   state = {
@@ -1524,7 +1527,8 @@ class Component extends DCLogic {
       const dow = cursor.getDay();
       if (dow !== 0 && dow !== 6) uteis++;
     }
-    return cursor.toISOString().slice(0, 10);
+    const minCalc = cursor.toISOString().slice(0, 10);
+    return minCalc < DATA_INICIO_SISTEMA ? DATA_INICIO_SISTEMA : minCalc;
   }
   onDiaChange = (e) => {
     const v = e.target.value;
@@ -1657,6 +1661,7 @@ class Component extends DCLogic {
       const d = new Date(hoje);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().slice(0, 10);
+      if (iso < DATA_INICIO_SISTEMA) continue;
       const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
       const label = `${this.diasDaSemana[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
       const ok = totalHoras >= this.getHorasDiaUsuario();
