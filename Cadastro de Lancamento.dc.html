@@ -804,6 +804,13 @@ const DEFAULTS_POR_EMAIL = {
     horasGastas: '8', descricao: 'Suporte técnico e geral em informática.',
   },
 };
+// Carga horária diária de cada funcionário. Padrão: 8h/dia.
+// Estagiários (Bernardo e Denise) trabalham 6h/dia (30h semanais).
+const HORAS_DIA_PADRAO = 8;
+const HORAS_DIA_POR_EMAIL = {
+  'bernardo@consol.eng.br': 6,
+  'denise@consol.eng.br': 6,
+};
 
 class Component extends DCLogic {
   state = {
@@ -1463,7 +1470,7 @@ class Component extends DCLogic {
       const iso = d.toISOString().slice(0, 10);
       const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
       const label = `${this.diasDaSemana[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-      const ok = totalHoras >= 8;
+      const ok = totalHoras >= this.getHorasDiaUsuario();
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       dias.push({
         label,
@@ -1496,7 +1503,7 @@ class Component extends DCLogic {
       const iso = cursor.toISOString().slice(0, 10);
       if (cursor.getDay() !== 0 && cursor.getDay() !== 6 && !feriadosCache[ano].has(iso)) {
         const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
-        if (totalHoras < 8) return new Date(cursor);
+        if (totalHoras < this.getHorasDiaUsuario()) return new Date(cursor);
       }
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -1562,20 +1569,25 @@ class Component extends DCLogic {
     return count;
   }
 
+  getHorasDiaUsuario(email) {
+    const e = email || (this.state.usuarioAtual && this.state.usuarioAtual.email);
+    return HORAS_DIA_POR_EMAIL[e] || HORAS_DIA_PADRAO;
+  }
+
   getMetaSemana() {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const inicio = this.getInicioSemana(hoje);
     const fim = new Date(inicio);
     fim.setDate(fim.getDate() + 6);
-    return this.contarDiasUteis(inicio, fim) * 8;
+    return this.contarDiasUteis(inicio, fim) * this.getHorasDiaUsuario();
   }
 
   getMetaMes() {
     const hoje = new Date();
     const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-    return this.contarDiasUteis(inicio, fim) * 8;
+    return this.contarDiasUteis(inicio, fim) * this.getHorasDiaUsuario();
   }
 
   getHorasTrabalhadasMes() {
@@ -1820,6 +1832,11 @@ class Component extends DCLogic {
       });
       return { numero: idx + 1, nome, totais };
     });
+    // carga horária diária por nome (estagiários têm meta menor)
+    const horasDiaPorNome = {};
+    this.state.usuariosLista.forEach((u) => {
+      horasDiaPorNome[u.nome] = HORAS_DIA_POR_EMAIL[u.email] || HORAS_DIA_PADRAO;
+    });
 
     const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const tituloMes = `Apropriação ${meses[mes]} de ${ano}`;
@@ -1866,10 +1883,15 @@ class Component extends DCLogic {
         if (!ws[ref]) continue;
         const idxSemana = c - 2;
         const ehTotal = idxSemana >= 0;
-        const metaSemana = ehTotal ? diasUteisSemana[idxSemana] * 8 : null;
-        const valorErrado = ehTotal && Number(ws[ref].v) !== metaSemana;
+        const nomeLinha = linhasDados[r - 2] ? linhasDados[r - 2].nome : null;
+        const horasDiaLinha = (nomeLinha && horasDiaPorNome[nomeLinha]) || HORAS_DIA_PADRAO;
+        const metaSemana = ehTotal ? diasUteisSemana[idxSemana] * horasDiaLinha : null;
+        const valorNumerico = Number(ws[ref].v);
+        const valorAbaixo = ehTotal && valorNumerico < metaSemana;
+        const valorAcima = ehTotal && valorNumerico > metaSemana;
+        const corValor = valorAbaixo ? 'C00000' : (valorAcima ? '1F4E99' : '000000');
         ws[ref].s = {
-          font: { name: 'Arial', sz: 11, color: { rgb: valorErrado ? 'C00000' : '000000' }, bold: valorErrado },
+          font: { name: 'Arial', sz: 11, color: { rgb: corValor }, bold: valorAbaixo || valorAcima },
           fill: { fgColor: { rgb: par ? 'F2F2F2' : 'FFFFFF' } },
           alignment: { horizontal: 'center', vertical: 'center' },
           border: bordasTodas,
