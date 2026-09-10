@@ -424,7 +424,7 @@
 
     <sc-if value="{{ diaAnteriorPendente }}" hint-placeholder-val="{{ false }}">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 24px; padding: 14px 18px; border-radius: 10px; background: #fdecea; border: 1px solid #f0b7ae; color: #a13a2c; font-size: 14px; font-weight: 500;">
-        ⚠ Lançamento pendente do dia {{ diaAnteriorFormatado }} (mínimo de 8h). Regularize para liberar o preenchimento.
+        ⚠ Lançamento pendente do dia {{ diaAnteriorFormatado }} (mínimo de {{ horasDiaUsuarioDisplay }}h). Regularize para liberar o preenchimento.
       </div>
     </sc-if>
 
@@ -897,11 +897,21 @@ const DEFAULTS_POR_EMAIL = {
   },
 };
 // Carga horária diária de cada funcionário. Padrão: 8h/dia.
-// Estagiários (Bernardo e Denise) trabalham 6h/dia (30h semanais).
+// Estagiários (Bernardo e Denise) trabalham 6h/dia (30h semanais) — usado
+// para calcular a META da semana/mês.
 const HORAS_DIA_PADRAO = 8;
 const HORAS_DIA_POR_EMAIL = {
   'bernardo@consol.eng.br': 6,
   'denise@consol.eng.br': 6,
+};
+// Mínimo aceito num dia isolado pra não ficar "pendente" — pode ser menor
+// que a meta diária (ex.: estagiário que sai mais cedo pra faculdade em
+// alguns dias e compensa em outro dia da mesma semana). Se um e-mail não
+// estiver aqui, usa a própria meta diária dele como mínimo (comportamento
+// padrão, sem tolerância).
+const HORAS_MIN_DIA_POR_EMAIL = {
+  'bernardo@consol.eng.br': 4,
+  'denise@consol.eng.br': 4,
 };
 // O sistema só tem dados válidos a partir dessa data. Nenhuma trava,
 // contagem de pendência ou calendário deve olhar pra antes disso.
@@ -1664,7 +1674,7 @@ class Component extends DCLogic {
       if (iso < DATA_INICIO_SISTEMA) continue;
       const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
       const label = `${this.diasDaSemana[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-      const ok = totalHoras >= this.getHorasDiaUsuario();
+      const ok = totalHoras >= this.getHorasMinDiaUsuario();
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       dias.push({
         label,
@@ -1697,7 +1707,7 @@ class Component extends DCLogic {
       const iso = cursor.toISOString().slice(0, 10);
       if (cursor.getDay() !== 0 && cursor.getDay() !== 6 && !feriadosCache[ano].has(iso)) {
         const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
-        if (totalHoras < this.getHorasDiaUsuario()) return new Date(cursor);
+        if (totalHoras < this.getHorasMinDiaUsuario()) return new Date(cursor);
       }
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -1766,6 +1776,11 @@ class Component extends DCLogic {
   getHorasDiaUsuario(email) {
     const e = email || (this.state.usuarioAtual && this.state.usuarioAtual.email);
     return HORAS_DIA_POR_EMAIL[e] || HORAS_DIA_PADRAO;
+  }
+
+  getHorasMinDiaUsuario(email) {
+    const e = email || (this.state.usuarioAtual && this.state.usuarioAtual.email);
+    return HORAS_MIN_DIA_POR_EMAIL[e] || this.getHorasDiaUsuario(e);
   }
 
   getMetaSemana() {
@@ -2555,6 +2570,7 @@ class Component extends DCLogic {
       formOpacity: diaAnteriorPendenteCalc ? 0.5 : 1,
       formPointerEvents: diaAnteriorPendenteCalc ? 'none' : 'auto',
       diaAnteriorFormatado: this.getDiaAnteriorFormatado(),
+      horasDiaUsuarioDisplay: this.getHorasMinDiaUsuario(),
       acumuladoPeriodo: this.getAcumuladoPeriodo(),
       horasSuffixDisplay: s.horasGastas ? 'inline' : 'none',
       horasInputWidth: s.horasGastas ? `${s.horasGastas.length}ch` : '100%',
