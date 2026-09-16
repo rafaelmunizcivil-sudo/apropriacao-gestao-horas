@@ -1478,22 +1478,27 @@ class Component extends DCLogic {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     const dias = [];
+    const feriadosCache = {};
     for (let i = 5; i >= 1; i--) {
       const d = new Date(hoje);
       d.setDate(d.getDate() - i);
       const iso = d.toISOString().slice(0, 10);
       if (iso < DATA_INICIO_SISTEMA) continue;
+      const ano = d.getFullYear();
+      if (!feriadosCache[ano]) feriadosCache[ano] = this.getFeriados(ano);
+      const isFeriado = feriadosCache[ano].has(iso);
       const totalHoras = this.state.lancamentos.filter((l) => l.dia === iso).reduce((acc, l) => acc + l.horas, 0);
-      const label = `${this.diasDaSemana[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      const dataFmt = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      const label = isFeriado ? `FERIADO ${dataFmt}` : `${this.diasDaSemana[d.getDay()]} ${dataFmt}`;
       const ok = totalHoras >= this.getHorasMinDiaUsuario();
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       dias.push({
         label,
-        horasLabel: totalHoras > 0 ? `${totalHoras}h` : 'sem horas',
-        bg: isWeekend ? '#fdf6d8' : (ok ? '#2c7a3d' : '#b5493a'),
-        border: isWeekend ? '1px solid #10265c' : 'none',
-        corTexto: isWeekend ? '#10265c' : '#fff',
-        corSubTexto: isWeekend ? '#665f2b' : '#f1f1f1',
+        horasLabel: isFeriado ? '' : (totalHoras > 0 ? `${totalHoras}h` : 'sem horas'),
+        bg: isFeriado ? '#ffffff' : (isWeekend ? '#fdf6d8' : (ok ? '#2c7a3d' : '#b5493a')),
+        border: (isFeriado || isWeekend) ? '1px solid #10265c' : 'none',
+        corTexto: isFeriado ? '#000000' : (isWeekend ? '#10265c' : '#fff'),
+        corSubTexto: isFeriado ? '#000000' : (isWeekend ? '#665f2b' : '#f1f1f1'),
         onClick: () => this.setState({
           diaTrabalho: iso, cliente: '', contrato: '', projeto: '',
           horasGastas: '', tipoTarefa: '', tipoBusca: '', descricao: '', mensagem: '',
