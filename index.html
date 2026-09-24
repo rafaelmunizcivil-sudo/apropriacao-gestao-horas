@@ -1811,9 +1811,13 @@ class Component extends DCLogic {
   contarDiasUteis(inicio, fim) {
     let count = 0;
     const d = new Date(inicio);
+    const feriadosCache = {};
     while (d <= fim) {
+      const ano = d.getFullYear();
+      if (!feriadosCache[ano]) feriadosCache[ano] = this.getFeriados(ano);
       const dia = d.getDay();
-      if (dia !== 0 && dia !== 6) count++;
+      const iso = d.toISOString().slice(0, 10);
+      if (dia !== 0 && dia !== 6 && !feriadosCache[ano].has(iso)) count++;
       d.setDate(d.getDate() + 1);
     }
     return count;
@@ -2390,8 +2394,12 @@ class Component extends DCLogic {
       { s: { r: linhaPctIdx, c: 0 }, e: { r: linhaPctIdx, c: 1 } },
     ];
     ws['!cols'] = [
-      { wch: 10 }, { wch: 30 }, { wch: 14 },
-      ...contratos.map((c) => ({ wch: Math.max(c.length + 2, 12) })),
+      { wch: Math.max('Código'.length, ...linhasDados.map((l) => String(l.codigo).length)) + 4 },
+      { wch: Math.max('Colaborador'.length, ...linhasDados.map((l) => String(l.nome).length)) + 4 },
+      { wch: Math.max('Total de Horas'.length, ...linhasDados.map((l) => String(l.total).length)) + 4 },
+      ...contratos.map((c, idx) => ({
+        wch: Math.max(c.length, ...linhasDados.map((l) => String(l.valores[idx]).length)) + 4,
+      })),
     ];
 
     const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
@@ -2499,7 +2507,9 @@ class Component extends DCLogic {
 
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
-    ws['!cols'] = [{ wch: 16 }, { wch: 26 }, { wch: 10 }, { wch: 10 }];
+    ws['!cols'] = [0, 1, 2, 3].map((c) => ({
+      wch: Math.max(...linhas.slice(1).map((row) => String(row[c] ?? '').length)) + 4,
+    }));
 
     const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
     const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
@@ -2601,7 +2611,9 @@ class Component extends DCLogic {
 
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = merges;
-    ws['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 20 }, { wch: 10 }];
+    ws['!cols'] = [0, 1, 2, 3].map((c) => ({
+      wch: Math.max(...linhas.slice(1).map((row) => String(row[c] ?? '').length)) + 4,
+    }));
 
     const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
     const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
@@ -2710,7 +2722,9 @@ class Component extends DCLogic {
     ];
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
-    ws['!cols'] = [{ wch: 30 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 20 }, { wch: 12 }];
+    ws['!cols'] = cabecalhos.map((_, c) => ({
+      wch: Math.max(...linhas.slice(1).map((row) => String(row[c] ?? '').length)) + 4,
+    }));
 
     const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
     const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
