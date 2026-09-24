@@ -1767,13 +1767,13 @@ class Component extends DCLogic {
 
     const estiloTitulo = {
       font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: '10265C' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
     const estiloCabecalho = {
       font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: 'B5493A' } },
+      fill: { fgColor: { rgb: '10265C' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
@@ -1930,6 +1930,7 @@ class Component extends DCLogic {
     ];
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
+    ws['!rows'] = [{ hpx: 22 }, { hpx: 22 }];
     ws['!cols'] = [
       { wch: 5 },
       { wch: 28 },
@@ -1940,13 +1941,13 @@ class Component extends DCLogic {
     const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
     const estiloTitulo = {
       font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: '10265C' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
     const estiloCabecalho = {
       font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: 'B5493A' } },
+      fill: { fgColor: { rgb: '10265C' } },
       alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
       border: bordasTodas,
     };
@@ -2035,6 +2036,7 @@ class Component extends DCLogic {
     const nColunas = 2;
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: colHelperFim } }];
+    ws['!rows'] = [{ hpx: 22 }, { hpx: 22 }, { hpx: 22 }];
     ws['!cols'] = [
       { wch: 28 }, { wch: 45 }, { wch: 2, hidden: true },
       ...rotulos.map((r) => ({ wch: Math.max(r.length + 2, 24), hidden: true })),
@@ -2049,13 +2051,13 @@ class Component extends DCLogic {
     const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
     const estiloTitulo = {
       font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: '10265C' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
     const estiloCabecalho = {
       font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: 'B5493A' } },
+      fill: { fgColor: { rgb: '10265C' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
@@ -2158,6 +2160,7 @@ class Component extends DCLogic {
       { s: { r: linhaTotalIdx, c: 0 }, e: { r: linhaTotalIdx, c: 1 } },
       { s: { r: linhaPctIdx, c: 0 }, e: { r: linhaPctIdx, c: 1 } },
     ];
+    ws['!rows'] = [{ hpx: 22 }, { hpx: 22 }, { hpx: 22 }];
     ws['!cols'] = [
       { wch: Math.max('Código'.length, ...linhasDados.map((l) => String(l.codigo).length)) + 4 },
       { wch: Math.max('Colaborador'.length, ...linhasDados.map((l) => String(l.nome).length)) + 4 },
@@ -2193,7 +2196,7 @@ class Component extends DCLogic {
     };
     const estiloPercentual = {
       font: { name: 'Arial', sz: 10, italic: true, color: { rgb: '6B6B6B' } },
-      fill: { fgColor: { rgb: 'F0F1F6' } },
+      fill: { fgColor: { rgb: 'FFFFFF' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
@@ -2272,6 +2275,9 @@ class Component extends DCLogic {
 
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
+    const alturasLinhas = [{ hpx: 22 }];
+    tiposLinha.forEach((tipo) => { alturasLinhas.push(tipo === 'contrato' ? { hpx: 22 } : {}); });
+    ws['!rows'] = alturasLinhas;
     ws['!cols'] = [0, 1, 2, 3].map((c) => ({
       wch: Math.max(...linhas.slice(1).map((row) => String(row[c] ?? '').length)) + 4,
     }));
@@ -2286,7 +2292,7 @@ class Component extends DCLogic {
     };
     const estiloTotal = {
       font: { name: 'Arial', sz: 11, bold: true, color: { rgb: '000000' } },
-      fill: { fgColor: { rgb: 'DFE4F0' } },
+      fill: { fgColor: { rgb: 'FFFFFF' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
@@ -2376,6 +2382,9 @@ class Component extends DCLogic {
 
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = merges;
+    const alturasLinhas = [{ hpx: 22 }];
+    tiposLinha.forEach((tipo) => { alturasLinhas.push(tipo === 'nome' ? { hpx: 22 } : {}); });
+    ws['!rows'] = alturasLinhas;
     ws['!cols'] = [0, 1, 2, 3].map((c) => ({
       wch: Math.max(...linhas.slice(1).map((row) => String(row[c] ?? '').length)) + 4,
     }));
@@ -2390,7 +2399,7 @@ class Component extends DCLogic {
     };
     const estiloSubtotal = {
       font: { name: 'Arial', sz: 11, bold: true, color: { rgb: '000000' } },
-      fill: { fgColor: { rgb: 'DFE4F0' } },
+      fill: { fgColor: { rgb: 'FFFFFF' } },
       alignment: { horizontal: 'center', vertical: 'center' },
       border: bordasTodas,
     };
@@ -2487,6 +2496,7 @@ class Component extends DCLogic {
     ];
     const ws = window.XLSX.utils.aoa_to_sheet(linhas);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
+    ws['!rows'] = [{ hpx: 22 }, { hpx: 22 }];
     ws['!cols'] = cabecalhos.map((_, c) => ({
       wch: Math.max(...linhas.slice(1).map((row) => String(row[c] ?? '').length)) + 4,
     }));
