@@ -2032,15 +2032,26 @@ class Component extends DCLogic {
 
     const { ws: ws2, semanas, nomesUsuarios } = this.gerarPlanilhaHorasFunc();
     const ws3 = this.gerarPlanilhaAnalise(semanas, nomesUsuarios);
+    const wsResumo = this.gerarPlanilhaResumoApropriacao();
+    const wsTarefasContrato = this.gerarPlanilhaTarefasPorContrato();
+    const wsDetalhamentoTarefa = this.gerarPlanilhaDetalhamentoTarefa();
+    const wsConferenciaRH = this.gerarPlanilhaConferenciaRH();
 
     const wb = window.XLSX.utils.book_new();
     window.XLSX.utils.book_append_sheet(wb, ws, 'Lançamentos');
+    window.XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo da Apropriação');
+    window.XLSX.utils.book_append_sheet(wb, wsTarefasContrato, 'Tarefas por Contrato');
+    window.XLSX.utils.book_append_sheet(wb, wsDetalhamentoTarefa, 'Detalhamento por Tarefa');
     window.XLSX.utils.book_append_sheet(wb, ws2, 'HORAS_FUNC.');
     window.XLSX.utils.book_append_sheet(wb, ws3, 'ANÁLISE');
+    window.XLSX.utils.book_append_sheet(wb, wsConferenciaRH, 'Conferência RH');
 
     const arrayBuffer = window.XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
     const zip = await window.JSZip.loadAsync(arrayBuffer);
-    const sheetPath = 'xl/worksheets/sheet3.xml';
+    // ANÁLISE é a 6ª aba adicionada ao workbook (Lançamentos, Resumo da Apropriação,
+    // Tarefas por Contrato, Detalhamento por Tarefa, HORAS_FUNC., ANÁLISE, Conferência RH)
+    // — por isso sheet6.xml. Se a ordem das abas mudar, esse número precisa acompanhar.
+    const sheetPath = 'xl/worksheets/sheet6.xml';
     const sheetXml = await zip.file(sheetPath).async('string');
     const dataValidationXml = '<dataValidations count="1"><dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" sqref="B2"><formula1>\'HORAS_FUNC.\'!$C$2:$G$2</formula1></dataValidation></dataValidations>';
     const ancoras = ['<hyperlinks', '<printOptions', '<pageMargins', '<pageSetup', '<headerFooter', '<rowBreaks', '<colBreaks', '<customProperties', '<cellWatches', '<ignoredErrors', '<smartTags', '<drawing', '</worksheet>'];
@@ -2312,6 +2323,433 @@ class Component extends DCLogic {
         };
       }
     }
+    return ws;
+  }
+
+  gerarPlanilhaResumoApropriacao() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const feriados = this.getFeriados(ano);
+    const primeiroDia = new Date(ano, mes, 1);
+    const ultimoDia = new Date(ano, mes + 1, 0);
+    const lancamentosMes = this.state.lancamentosTodos.filter((l) => {
+      const d = new Date(l.dia + 'T00:00:00');
+      return d.getFullYear() === ano && d.getMonth() === mes;
+    });
+
+    const nomesUsuarios = [...new Set(Object.values(this.state.usuariosMapa))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    // contratos distintos com lançamento no mês; CONSOL sempre por último
+    const contratosSet = new Set(lancamentosMes.map((l) => l.contrato).filter(Boolean));
+    const contratos = [...contratosSet].filter((c) => c !== 'CONSOL').sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (contratosSet.has('CONSOL')) contratos.push('CONSOL');
+
+    const linhasDados = nomesUsuarios.map((nome) => {
+      const doFuncionario = lancamentosMes.filter((l) => (this.state.usuariosMapa[l.usuarioId] || '') === nome);
+      const valores = contratos.map((c) => doFuncionario.filter((l) => l.contrato === c).reduce((a, l) => a + (Number(l.horas) || 0), 0));
+      const total = valores.reduce((a, v) => a + v, 0);
+      return { codigo: gerarCodigoFuncionario(nome), nome, total, valores };
+    }).filter((l) => l.total > 0);
+
+    const totaisPorContrato = contratos.map((c, idx) => linhasDados.reduce((a, l) => a + l.valores[idx], 0));
+    const totalGeral = totaisPorContrato.reduce((a, v) => a + v, 0);
+
+    let diasUteisMes = 0;
+    {
+      const c = new Date(primeiroDia);
+      while (c <= ultimoDia) {
+        const iso = c.toISOString().slice(0, 10);
+        if (c.getDay() !== 0 && c.getDay() !== 6 && !feriados.has(iso)) diasUteisMes++;
+        c.setDate(c.getDate() + 1);
+      }
+    }
+    const horasUteisMes = diasUteisMes * HORAS_DIA_PADRAO;
+
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const tituloMes = `${meses[mes]}/${ano}`;
+
+    const cabecalhos = ['Código', 'Colaborador', 'Total de Horas', ...contratos];
+    const nColunas = cabecalhos.length;
+
+    const linhaTotalIdx = 3 + linhasDados.length;
+    const linhaPctIdx = linhaTotalIdx + 1;
+
+    const linhas = [
+      ['Resumo da Apropriação da Equipe Técnica e Comercial'],
+      ['Mês:', tituloMes, '', '', 'Horas úteis no mês:', horasUteisMes],
+      cabecalhos,
+      ...linhasDados.map((l) => [l.codigo, l.nome, l.total, ...l.valores]),
+      ['TOTAL', '', totalGeral, ...totaisPorContrato],
+      ['% POR PROJETO', '', '100%', ...totaisPorContrato.map((v) => (totalGeral > 0 ? `${((v / totalGeral) * 100).toFixed(1)}%` : '0%'))],
+    ];
+    const ws = window.XLSX.utils.aoa_to_sheet(linhas);
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } },
+      { s: { r: linhaTotalIdx, c: 0 }, e: { r: linhaTotalIdx, c: 1 } },
+      { s: { r: linhaPctIdx, c: 0 }, e: { r: linhaPctIdx, c: 1 } },
+    ];
+    ws['!cols'] = [
+      { wch: 10 }, { wch: 30 }, { wch: 14 },
+      ...contratos.map((c) => ({ wch: Math.max(c.length + 2, 12) })),
+    ];
+
+    const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
+    const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
+    const estiloTitulo = {
+      font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+    const estiloMesLabel = {
+      font: { name: 'Arial', sz: 11, bold: true, color: { rgb: '10265C' } },
+      border: bordasTodas,
+    };
+    const estiloCabecalho = {
+      font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '10265C' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+    const estiloTotal = {
+      font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '10265C' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+    const estiloPercentual = {
+      font: { name: 'Arial', sz: 10, italic: true, color: { rgb: '6B6B6B' } },
+      fill: { fgColor: { rgb: 'F0F1F6' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+
+    for (let c = 0; c < nColunas; c++) {
+      const refTitulo = window.XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[refTitulo]) ws[refTitulo].s = estiloTitulo;
+      else ws[refTitulo] = { t: 's', v: '', s: estiloTitulo };
+      const refCabecalho = window.XLSX.utils.encode_cell({ r: 2, c });
+      if (ws[refCabecalho]) ws[refCabecalho].s = estiloCabecalho;
+      else ws[refCabecalho] = { t: 's', v: '', s: estiloCabecalho };
+    }
+    ['A2', 'B2', 'E2', 'F2'].forEach((ref) => { if (ws[ref]) ws[ref].s = estiloMesLabel; });
+
+    for (let r = 3; r < linhaTotalIdx; r++) {
+      const par = (r - 3) % 2 === 0;
+      for (let c = 0; c < nColunas; c++) {
+        const ref = window.XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) continue;
+        ws[ref].s = {
+          font: { name: 'Arial', sz: 11, color: { rgb: '000000' }, bold: c === 0 },
+          fill: { fgColor: { rgb: par ? 'F2F2F2' : 'FFFFFF' } },
+          alignment: { horizontal: c === 1 ? 'left' : 'center', vertical: 'center' },
+          border: bordasTodas,
+        };
+      }
+    }
+    for (let c = 0; c < nColunas; c++) {
+      const refT = window.XLSX.utils.encode_cell({ r: linhaTotalIdx, c });
+      if (ws[refT]) ws[refT].s = estiloTotal;
+      else ws[refT] = { t: 's', v: '', s: estiloTotal };
+      const refP = window.XLSX.utils.encode_cell({ r: linhaPctIdx, c });
+      if (ws[refP]) ws[refP].s = estiloPercentual;
+      else ws[refP] = { t: 's', v: '', s: estiloPercentual };
+    }
+
+    return ws;
+  }
+
+  gerarPlanilhaTarefasPorContrato() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const lancamentosMes = this.state.lancamentosTodos.filter((l) => {
+      const d = new Date(l.dia + 'T00:00:00');
+      return d.getFullYear() === ano && d.getMonth() === mes;
+    });
+
+    const contratosSet = new Set(lancamentosMes.map((l) => l.contrato).filter(Boolean));
+    const contratos = [...contratosSet].filter((c) => c !== 'CONSOL').sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    if (contratosSet.has('CONSOL')) contratos.push('CONSOL');
+
+    const nColunas = 4;
+    const linhas = [['Tarefas por Contrato']];
+    const tiposLinha = []; // 'contrato' | 'dado' | 'total', em paralelo com `linhas` (a partir da linha 1)
+
+    contratos.forEach((contrato) => {
+      const doContrato = lancamentosMes.filter((l) => l.contrato === contrato);
+      const porTarefa = {};
+      doContrato.forEach((l) => {
+        const t = l.tipoTarefa || '(sem tipo)';
+        porTarefa[t] = (porTarefa[t] || 0) + (Number(l.horas) || 0);
+      });
+      const ordenadas = Object.entries(porTarefa).sort((a, b) => b[1] - a[1]);
+      const totalContrato = ordenadas.reduce((a, [, h]) => a + h, 0);
+
+      linhas.push([`Contrato ${contrato}`, 'Tipo de Tarefa', 'Horas', '%']);
+      tiposLinha.push('contrato');
+      ordenadas.forEach(([tarefa, horas]) => {
+        linhas.push(['', tarefa, horas, totalContrato > 0 ? `${((horas / totalContrato) * 100).toFixed(1)}%` : '0%']);
+        tiposLinha.push('dado');
+      });
+      linhas.push(['', `Total ${contrato}`, totalContrato, '100%']);
+      tiposLinha.push('total');
+    });
+
+    const ws = window.XLSX.utils.aoa_to_sheet(linhas);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
+    ws['!cols'] = [{ wch: 16 }, { wch: 26 }, { wch: 10 }, { wch: 10 }];
+
+    const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
+    const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
+    const estiloTitulo = {
+      font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+    const estiloTotal = {
+      font: { name: 'Arial', sz: 11, bold: true, color: { rgb: '000000' } },
+      fill: { fgColor: { rgb: 'DFE4F0' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+
+    for (let c = 0; c < nColunas; c++) {
+      const refTitulo = window.XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[refTitulo]) ws[refTitulo].s = estiloTitulo;
+      else ws[refTitulo] = { t: 's', v: '', s: estiloTitulo };
+    }
+
+    let parIdx = 0;
+    tiposLinha.forEach((tipo, i) => {
+      const r = i + 1;
+      for (let c = 0; c < nColunas; c++) {
+        const ref = window.XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) ws[ref] = { t: 's', v: '' };
+        if (tipo === 'contrato') {
+          ws[ref].s = {
+            font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '10265C' } },
+            alignment: { horizontal: c === 0 ? 'left' : 'center', vertical: 'center' },
+            border: bordasTodas,
+          };
+        } else if (tipo === 'total') {
+          ws[ref].s = estiloTotal;
+        } else {
+          const par = parIdx % 2 === 0;
+          ws[ref].s = {
+            font: { name: 'Arial', sz: 11, color: { rgb: '000000' } },
+            fill: { fgColor: { rgb: par ? 'F2F2F2' : 'FFFFFF' } },
+            alignment: { horizontal: c === 1 ? 'left' : 'center', vertical: 'center' },
+            border: bordasTodas,
+          };
+        }
+      }
+      parIdx = tipo === 'dado' ? parIdx + 1 : 0;
+    });
+
+    return ws;
+  }
+
+  gerarPlanilhaDetalhamentoTarefa() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const lancamentosMes = this.state.lancamentosTodos.filter((l) => {
+      const d = new Date(l.dia + 'T00:00:00');
+      return d.getFullYear() === ano && d.getMonth() === mes;
+    });
+    const nomesUsuarios = [...new Set(Object.values(this.state.usuariosMapa))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    const nColunas = 4;
+    const linhas = [['Detalhamento de Horas por Tarefa']];
+    const tiposLinha = []; // 'nome' | 'dado' | 'subtotal'
+    const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
+
+    nomesUsuarios.forEach((nome) => {
+      const doFuncionario = lancamentosMes.filter((l) => (this.state.usuariosMapa[l.usuarioId] || '') === nome);
+      if (doFuncionario.length === 0) return;
+
+      linhas.push([nome, 'Contrato', 'Tipo de Tarefa', 'Horas']);
+      tiposLinha.push('nome');
+
+      const contratosSet = new Set(doFuncionario.map((l) => l.contrato).filter(Boolean));
+      const contratos = [...contratosSet].filter((c) => c !== 'CONSOL').sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      if (contratosSet.has('CONSOL')) contratos.push('CONSOL');
+
+      contratos.forEach((contrato) => {
+        const doContrato = doFuncionario.filter((l) => l.contrato === contrato);
+        const porTarefa = {};
+        doContrato.forEach((l) => {
+          const t = l.tipoTarefa || '(sem tipo)';
+          porTarefa[t] = (porTarefa[t] || 0) + (Number(l.horas) || 0);
+        });
+        const ordenadas = Object.entries(porTarefa).sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+        const totalContrato = ordenadas.reduce((a, [, h]) => a + h, 0);
+        ordenadas.forEach(([tarefa, horas]) => {
+          linhas.push(['', contrato, tarefa, horas]);
+          tiposLinha.push('dado');
+        });
+        const rSubtotal = linhas.length;
+        linhas.push(['', `Subtotal ${contrato}`, '', totalContrato]);
+        tiposLinha.push('subtotal');
+        merges.push({ s: { r: rSubtotal, c: 1 }, e: { r: rSubtotal, c: 2 } });
+      });
+    });
+
+    const ws = window.XLSX.utils.aoa_to_sheet(linhas);
+    ws['!merges'] = merges;
+    ws['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 20 }, { wch: 10 }];
+
+    const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
+    const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
+    const estiloTitulo = {
+      font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+    const estiloSubtotal = {
+      font: { name: 'Arial', sz: 11, bold: true, color: { rgb: '000000' } },
+      fill: { fgColor: { rgb: 'DFE4F0' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+
+    for (let c = 0; c < nColunas; c++) {
+      const refTitulo = window.XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[refTitulo]) ws[refTitulo].s = estiloTitulo;
+      else ws[refTitulo] = { t: 's', v: '', s: estiloTitulo };
+    }
+
+    let parIdx = 0;
+    tiposLinha.forEach((tipo, i) => {
+      const r = i + 1;
+      for (let c = 0; c < nColunas; c++) {
+        const ref = window.XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) ws[ref] = { t: 's', v: '' };
+        if (tipo === 'nome') {
+          ws[ref].s = {
+            font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { fgColor: { rgb: '10265C' } },
+            alignment: { horizontal: c === 0 ? 'left' : 'center', vertical: 'center' },
+            border: bordasTodas,
+          };
+        } else if (tipo === 'subtotal') {
+          ws[ref].s = estiloSubtotal;
+        } else {
+          const par = parIdx % 2 === 0;
+          ws[ref].s = {
+            font: { name: 'Arial', sz: 11, color: { rgb: '000000' } },
+            fill: { fgColor: { rgb: par ? 'F2F2F2' : 'FFFFFF' } },
+            alignment: { horizontal: c === 2 ? 'left' : 'center', vertical: 'center' },
+            border: bordasTodas,
+          };
+        }
+      }
+      parIdx = tipo === 'dado' ? parIdx + 1 : 0;
+    });
+
+    return ws;
+  }
+
+  gerarPlanilhaConferenciaRH() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const feriados = this.getFeriados(ano);
+    const primeiroDia = new Date(ano, mes, 1);
+    const ultimoDia = new Date(ano, mes + 1, 0);
+    const lancamentosMes = this.state.lancamentosTodos.filter((l) => {
+      const d = new Date(l.dia + 'T00:00:00');
+      return d.getFullYear() === ano && d.getMonth() === mes;
+    });
+    const nomesUsuarios = [...new Set(Object.values(this.state.usuariosMapa))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+    let diasUteisMes = 0;
+    {
+      const c = new Date(primeiroDia);
+      while (c <= ultimoDia) {
+        const iso = c.toISOString().slice(0, 10);
+        if (c.getDay() !== 0 && c.getDay() !== 6 && !feriados.has(iso)) diasUteisMes++;
+        c.setDate(c.getDate() + 1);
+      }
+    }
+
+    const somaPorTipo = (lista, prefixo) => lista
+      .filter((l) => (l.tipoTarefa || '').startsWith(prefixo))
+      .reduce((a, l) => a + (Number(l.horas) || 0), 0);
+
+    const linhasDados = nomesUsuarios.map((nome) => {
+      const doFuncionario = lancamentosMes.filter((l) => (this.state.usuariosMapa[l.usuarioId] || '') === nome);
+      if (doFuncionario.length === 0) return null;
+      const rfjve = somaPorTipo(doFuncionario, 'RFJVE');
+      const atest = somaPorTipo(doFuncionario, 'ATEST');
+      const falta = somaPorTipo(doFuncionario, 'FALTA');
+      const feria = somaPorTipo(doFuncionario, 'FERIA');
+      const horasTrabalhadas = doFuncionario.reduce((a, l) => a + (Number(l.horas) || 0), 0);
+      const usuario = this.state.usuariosLista.find((u) => u.nome === nome);
+      const horasDia = usuario ? (HORAS_DIA_POR_EMAIL[usuario.email] || HORAS_DIA_PADRAO) : HORAS_DIA_PADRAO;
+      const metaMensal = diasUteisMes * horasDia;
+      const diff = horasTrabalhadas - metaMensal;
+      return { nome, rfjve, atest, falta, feria, diff };
+    }).filter(Boolean);
+
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const tituloMes = `Conferência RH — Faltas, Atestados, Férias e Horas Extras — ${meses[mes]}/${ano}`;
+    const cabecalhos = ['Colaborador', 'Falta Justificada p/ Chefia (RFJVE)', 'Falta Justificada por Atestado (ATEST)', 'Falta Não Justificada (FALTA)', 'Férias do Colaborador (FÉRIA)', 'Hora Extra'];
+    const nColunas = cabecalhos.length;
+    const fmt = (v) => (v > 0 ? v : '-');
+
+    const linhas = [
+      [tituloMes],
+      cabecalhos,
+      ...linhasDados.map((l) => [l.nome, fmt(l.rfjve), fmt(l.atest), fmt(l.falta), fmt(l.feria), l.diff === 0 ? '-' : l.diff]),
+    ];
+    const ws = window.XLSX.utils.aoa_to_sheet(linhas);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: nColunas - 1 } }];
+    ws['!cols'] = [{ wch: 30 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 20 }, { wch: 12 }];
+
+    const bordaFina = { style: 'thin', color: { rgb: 'BFBFBF' } };
+    const bordasTodas = { top: bordaFina, bottom: bordaFina, left: bordaFina, right: bordaFina };
+    const estiloTitulo = {
+      font: { name: 'Arial', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: 'B5493A' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: bordasTodas,
+    };
+    const estiloCabecalho = {
+      font: { name: 'Arial', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '10265C' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: bordasTodas,
+    };
+
+    for (let c = 0; c < nColunas; c++) {
+      const refTitulo = window.XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[refTitulo]) ws[refTitulo].s = estiloTitulo;
+      else ws[refTitulo] = { t: 's', v: '', s: estiloTitulo };
+      const refCabecalho = window.XLSX.utils.encode_cell({ r: 1, c });
+      if (ws[refCabecalho]) ws[refCabecalho].s = estiloCabecalho;
+    }
+    for (let r = 2; r < linhas.length; r++) {
+      const par = (r - 2) % 2 === 0;
+      const diffLinha = linhasDados[r - 2] ? linhasDados[r - 2].diff : 0;
+      for (let c = 0; c < nColunas; c++) {
+        const ref = window.XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) continue;
+        const ehHoraExtra = c === nColunas - 1;
+        ws[ref].s = {
+          font: { name: 'Arial', sz: 11, color: { rgb: ehHoraExtra && diffLinha < 0 ? 'C00000' : '000000' }, bold: c === 0 || (ehHoraExtra && diffLinha !== 0) },
+          fill: { fgColor: { rgb: par ? 'F2F2F2' : 'FFFFFF' } },
+          alignment: { horizontal: c === 0 ? 'left' : 'center', vertical: 'center' },
+          border: bordasTodas,
+        };
+      }
+    }
+
     return ws;
   }
 
