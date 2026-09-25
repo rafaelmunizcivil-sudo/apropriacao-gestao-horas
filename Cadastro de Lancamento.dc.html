@@ -661,7 +661,9 @@
         <button onClick="{{ abrirDashboards }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Dashboards</button>
       </sc-if>
       <button onClick="{{ sair }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Sair</button>
-      <button onClick="{{ voltarParaFuncionario }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Voltar para o formulário</button>
+      <sc-if value="{{ podeVerDashboards }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ voltarParaFuncionario }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Voltar para o formulário</button>
+      </sc-if>
     </div>
   </div>
 
@@ -914,7 +916,8 @@ class Component extends DCLogic {
     const perfilDoc = await this._FB.UsuarioService.buscarPorId(user.uid);
     const usuarioAtual = { uid: user.uid, email: user.email, nome: (perfilDoc && perfilDoc.nome) || user.email, perfil: (perfilDoc && perfilDoc.perfil) || 'funcionario' };
     const defaults = DEFAULTS_POR_EMAIL[usuarioAtual.email];
-    this.setState({ usuarioAtual, carregandoAuth: false, paginaAtual: 'funcionario', ...(defaults || {}) });
+    const paginaInicial = usuarioAtual.perfil === 'rh' ? 'supervisor' : 'funcionario';
+    this.setState({ usuarioAtual, carregandoAuth: false, paginaAtual: paginaInicial, ...(defaults || {}) });
     this._unsubLancamentos = this._FB.LancamentoService.ouvirPorUsuario(user.uid, (lista) => {
       this.setState({ lancamentos: lista.map((l) => ({ ...l, horas: Number(l.horas) })) });
     });
