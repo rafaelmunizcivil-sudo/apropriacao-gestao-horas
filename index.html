@@ -719,13 +719,14 @@
 
     <div style="border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 1px 3px rgba(16, 38, 92, 0.06); border: 1px solid #e2e2e2;">
       <div style="background: #eef2f9; padding: 14px 20px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; row-gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #c7d1e6;">
-        <div style="font-size: 16px; color: #10265c;">Acumulado para o período (histórico completo)</div>
+        <div style="font-size: 16px; color: #10265c;">{{ tituloAcumuladoPeriodo }}</div>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
           <select onChange="{{ onMesExportacaoChange }}" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 13px; cursor: pointer;">
             <sc-for list="{{ mesesExportacaoDisponiveis }}" as="m" hint-placeholder-count="6">
               <option value="{{ m.valor }}" selected="{{ m.valor === mesExportacaoSelecionado }}">{{ m.label }}</option>
             </sc-for>
           </select>
+          <button onClick="{{ selecionarVisualizacaoGeral }}" style="padding: 8px 14px; border-radius: 8px; border: 1px solid #10265c; background: {{ bgBotaoGeral }}; color: {{ corBotaoGeral }}; font-size: 13px; cursor: pointer;">Geral</button>
           <button onClick="{{ supervisorExportExcel }}" style="padding: 8px 14px; border-radius: 8px; border: 1px solid {{ corBotaoExport }}; background: {{ bgBotaoExport }}; color: {{ corTextoExport }}; font-size: 13px; cursor: pointer;">Excel</button>
           <button onClick="{{ supervisorExportPDF }}" style="padding: 8px 14px; border-radius: 8px; border: 1px solid {{ corBotaoExport }}; background: {{ bgBotaoExport }}; color: {{ corTextoExport }}; font-size: 13px; cursor: pointer;">PDF</button>
         </div>
@@ -1868,9 +1869,11 @@ class Component extends DCLogic {
 
   getTodosLancamentosFormatados() {
     const { ano, mes } = this.getAnoMesExportacao();
+    const geral = this.isVisualizacaoGeral();
     const nomeDe = (l) => this.state.usuariosMapa[l.usuarioId] || 'Não informado';
     return [...this.state.lancamentosTodos]
       .filter((l) => {
+        if (geral) return true;
         const d = new Date(l.dia + 'T00:00:00');
         return d.getFullYear() === ano && d.getMonth() === mes;
       })
@@ -1897,6 +1900,7 @@ class Component extends DCLogic {
 
   getMesReferenciaTexto() {
     const meses = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+    if (this.isVisualizacaoGeral()) return 'APROPRIAÇÃO — TODOS OS MESES';
     const { ano, mes } = this.getAnoMesExportacao();
     return `APROPRIAÇÃO ${meses[mes]} DE ${ano}`;
   }
@@ -2099,15 +2103,20 @@ class Component extends DCLogic {
   }
 
   getAnoMesExportacao() {
+    const hoje = new Date();
+    if (this.isVisualizacaoGeral()) return { ano: hoje.getFullYear(), mes: hoje.getMonth() };
     const [anoStr, mesStr] = (this.state.mesExportacaoSelecionado || '').split('-');
     const ano = Number(anoStr);
     const mes = Number(mesStr) - 1; // 0-indexed, igual Date.getMonth()
-    if (!ano || Number.isNaN(mes)) {
-      const hoje = new Date();
-      return { ano: hoje.getFullYear(), mes: hoje.getMonth() };
-    }
+    if (!ano || Number.isNaN(mes)) return { ano: hoje.getFullYear(), mes: hoje.getMonth() };
     return { ano, mes };
   }
+
+  isVisualizacaoGeral() {
+    return this.state.mesExportacaoSelecionado === 'geral';
+  }
+
+  selecionarVisualizacaoGeral = () => this.setState({ mesExportacaoSelecionado: 'geral' });
 
   getMesesExportacaoDisponiveis() {
     const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -2867,7 +2876,14 @@ class Component extends DCLogic {
   }
 
   getAcumuladoTodos() {
+    const { ano, mes } = this.getAnoMesExportacao();
+    const geral = this.isVisualizacaoGeral();
     return [...this.state.lancamentosTodos]
+      .filter((l) => {
+        if (geral) return true;
+        const d = new Date(l.dia + 'T00:00:00');
+        return d.getFullYear() === ano && d.getMonth() === mes;
+      })
       .map((l) => {
         const d = new Date(l.dia + 'T00:00:00');
         return {
@@ -2983,6 +2999,13 @@ class Component extends DCLogic {
       mesesExportacaoDisponiveis: this.getMesesExportacaoDisponiveis(),
       mesExportacaoSelecionado: s.mesExportacaoSelecionado,
       onMesExportacaoChange: this.onMesExportacaoChange,
+      selecionarVisualizacaoGeral: this.selecionarVisualizacaoGeral,
+      visualizacaoGeral: this.isVisualizacaoGeral(),
+      bgBotaoGeral: this.isVisualizacaoGeral() ? '#10265c' : '#fff',
+      corBotaoGeral: this.isVisualizacaoGeral() ? '#fff' : '#10265c',
+      tituloAcumuladoPeriodo: this.isVisualizacaoGeral()
+        ? 'Acumulado para o período (Geral — todos os meses)'
+        : `Acumulado para o período (${(this.getMesesExportacaoDisponiveis().find((m) => m.valor === s.mesExportacaoSelecionado) || {}).label || ''})`,
       abrirCadastro: this.abrirCadastro,
       cadastroModoLista: s.cadastroModo === 'lista',
       cadastroModoForm: s.cadastroModo === 'form',
