@@ -727,7 +727,6 @@
               <option value="{{ m.valor }}" selected="{{ m.valor === mesExportacaoSelecionado }}">{{ m.label }}</option>
             </sc-for>
           </select>
-          <button onClick="{{ selecionarVisualizacaoGeral }}" style="padding: 8px 14px; border-radius: 8px; border: 1px solid #10265c; background: {{ bgBotaoGeral }}; color: {{ corBotaoGeral }}; font-size: 13px; cursor: pointer;">Geral</button>
           <button onClick="{{ supervisorExportExcel }}" style="padding: 8px 14px; border-radius: 8px; border: 1px solid {{ corBotaoExport }}; background: {{ bgBotaoExport }}; color: {{ corTextoExport }}; font-size: 13px; cursor: pointer;">Excel</button>
           <button onClick="{{ supervisorExportPDF }}" style="padding: 8px 14px; border-radius: 8px; border: 1px solid {{ corBotaoExport }}; background: {{ bgBotaoExport }}; color: {{ corTextoExport }}; font-size: 13px; cursor: pointer;">PDF</button>
         </div>
@@ -3000,10 +2999,7 @@ class Component extends DCLogic {
       mesesExportacaoDisponiveis: this.getMesesExportacaoDisponiveis(),
       mesExportacaoSelecionado: s.mesExportacaoSelecionado,
       onMesExportacaoChange: this.onMesExportacaoChange,
-      selecionarVisualizacaoGeral: this.selecionarVisualizacaoGeral,
       visualizacaoGeral: this.isVisualizacaoGeral(),
-      bgBotaoGeral: this.isVisualizacaoGeral() ? '#10265c' : '#fff',
-      corBotaoGeral: this.isVisualizacaoGeral() ? '#fff' : '#10265c',
       tituloAcumuladoPeriodo: this.isVisualizacaoGeral()
         ? 'Acumulado para o período (Geral — todos os meses)'
         : `Acumulado para o período (${(this.getMesesExportacaoDisponiveis().find((m) => m.valor === s.mesExportacaoSelecionado) || {}).label || ''})`,
