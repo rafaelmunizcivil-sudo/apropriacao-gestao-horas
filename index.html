@@ -1018,7 +1018,7 @@ class Component extends DCLogic {
     this._unsubAtividades = this._FB.AtividadeService.ouvirTodos((lista) => {
       this.setState({ atividadesExtras: lista.map((a) => ({ id: a.id, identificacao: a.identificacaoContrato, codigo: a.codigo, descricao: a.descricao })) });
     });
-    if (usuarioAtual.perfil === 'supervisor' || usuarioAtual.perfil === 'administrador') {
+    if (usuarioAtual.perfil === 'supervisor' || usuarioAtual.perfil === 'administrador' || usuarioAtual.perfil === 'rh') {
       this._unsubLancamentosTodos = this._FB.LancamentoService.ouvirTodos((lista) => {
         this.setState({ lancamentosTodos: lista.map((l) => ({ ...l, horas: Number(l.horas) })) });
       });
