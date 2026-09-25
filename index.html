@@ -239,6 +239,7 @@
       <div style="display: flex; gap: 8px; margin-bottom: 12px;">
         <button onClick="{{ selecionarNovoFuncionario }}" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #10265c; background: {{ corPerfilFuncionario }}; color: {{ corTextoPerfilFuncionario }}; font-size: 13px; cursor: pointer;">Funcionário</button>
         <button onClick="{{ selecionarNovoSupervisor }}" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #10265c; background: {{ corPerfilSupervisor }}; color: {{ corTextoPerfilSupervisor }}; font-size: 13px; cursor: pointer;">Supervisor</button>
+        <button onClick="{{ selecionarNovoRH }}" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #10265c; background: {{ corPerfilRH }}; color: {{ corTextoPerfilRH }}; font-size: 13px; cursor: pointer;">RH</button>
       </div>
       <sc-if value="{{ cadastroErro }}" hint-placeholder-val="{{ false }}">
         <div style="color: #a13a2c; font-size: 13px; margin-bottom: 8px;">{{ cadastroErro }}</div>
@@ -707,7 +708,9 @@
         <button onClick="{{ abrirCadastroAtividade }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Cadastrar atividade</button>
         <button onClick="{{ abrirTrocarSenha }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Trocar senha</button>
       </sc-if>
-      <button onClick="{{ abrirDashboards }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Dashboards</button>
+      <sc-if value="{{ podeVerDashboards }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ abrirDashboards }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Dashboards</button>
+      </sc-if>
       <button onClick="{{ sair }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Sair</button>
       <button onClick="{{ voltarParaFuncionario }}" style="padding: 10px 18px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 14px; cursor: pointer;">Voltar para o formulário</button>
     </div>
@@ -1089,7 +1092,7 @@ class Component extends DCLogic {
     this.setState({ cadastroCarregando: true, cadastroErro: '', cadastroMsg: '' });
     try {
       await this._FB.criarFuncionario(novoNome, novoEmail, novoPerfil);
-      const rotulo = novoPerfil === 'supervisor' ? 'supervisor' : 'funcionário';
+      const rotulo = novoPerfil === 'supervisor' ? 'supervisor' : (novoPerfil === 'rh' ? 'RH' : 'funcionário');
       this.setState({ cadastroMsg: `${novoNome} cadastrado(a) como ${rotulo}, com senha inicial 123456.`, novoNome: '', novoEmail: '', cadastroCarregando: false, cadastroModo: 'lista' });
     } catch (e) {
       this.setState({ cadastroErro: 'Não foi possível cadastrar (e-mail já em uso ou inválido).', cadastroCarregando: false });
@@ -2970,8 +2973,9 @@ class Component extends DCLogic {
       carregandoAuth: s.carregandoAuth,
       logado: !!s.usuarioAtual,
       isEntradaLogin: !s.carregandoAuth && !s.usuarioAtual,
-      ehSupervisor: !!s.usuarioAtual && (s.usuarioAtual.perfil === 'supervisor' || s.usuarioAtual.perfil === 'administrador'),
+      ehSupervisor: !!s.usuarioAtual && (s.usuarioAtual.perfil === 'supervisor' || s.usuarioAtual.perfil === 'administrador' || s.usuarioAtual.perfil === 'rh'),
       ehAdministrador: !!s.usuarioAtual && s.usuarioAtual.perfil === 'administrador',
+      podeVerDashboards: !!s.usuarioAtual && (s.usuarioAtual.perfil === 'supervisor' || s.usuarioAtual.perfil === 'administrador'),
       nomeUsuario: s.usuarioAtual ? s.usuarioAtual.nome : '',
       onLoginEmailChange: this.onLoginEmailChange,
       onLoginSenhaChange: this.onLoginSenhaChange,
@@ -3020,10 +3024,13 @@ class Component extends DCLogic {
       criarFuncionario: this.criarFuncionario,
       selecionarNovoFuncionario: () => this.selecionarNovoPerfil('funcionario'),
       selecionarNovoSupervisor: () => this.selecionarNovoPerfil('supervisor'),
+      selecionarNovoRH: () => this.selecionarNovoPerfil('rh'),
       corPerfilFuncionario: s.novoPerfil === 'funcionario' ? '#10265c' : '#fff',
       corTextoPerfilFuncionario: s.novoPerfil === 'funcionario' ? '#fff' : '#10265c',
       corPerfilSupervisor: s.novoPerfil === 'supervisor' ? '#10265c' : '#fff',
       corTextoPerfilSupervisor: s.novoPerfil === 'supervisor' ? '#fff' : '#10265c',
+      corPerfilRH: s.novoPerfil === 'rh' ? '#10265c' : '#fff',
+      corTextoPerfilRH: s.novoPerfil === 'rh' ? '#fff' : '#10265c',
       cadastroContratoAberto: s.cadastroContratoAberto,
       contratoModoLista: s.contratoModo === 'lista',
       contratoModoForm: s.contratoModo === 'form',
