@@ -671,6 +671,7 @@
         <div style="font-size: 16px; color: #10265c;">{{ tituloAcumuladoPeriodo }}</div>
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
           <select onChange="{{ onMesExportacaoChange }}" style="padding: 8px 10px; border-radius: 8px; border: 1px solid #10265c; background: #fff; color: #10265c; font-size: 13px; cursor: pointer;">
+            <option value="geral" selected="{{ visualizacaoGeral }}">Geral (todos os meses)</option>
             <sc-for list="{{ mesesExportacaoDisponiveis }}" as="m" hint-placeholder-count="6">
               <option value="{{ m.valor }}" selected="{{ m.valor === mesExportacaoSelecionado }}">{{ m.label }}</option>
             </sc-for>
